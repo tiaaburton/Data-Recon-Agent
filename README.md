@@ -67,10 +67,12 @@ graph LR
 All architectural design documents, runbooks, specifications, and papers are available in the [`docs/`](docs/) directory:
 
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
+- 🤖 **[Gemini Enterprise Integration Guide](docs/gemini_enterprise_integration.md)** — Extension manifests, OpenAPI 3.0 tool schemas, OIDC authentication, and streaming A2UI custom catalog rendering.
 - 📊 **[Draw.io Visual Architecture Diagram](docs/architecture.drawio)** — Visual diagram openable in Draw.io / diagrams.net.
 - 📐 **[Component Blueprint & Code Contracts](docs/blueprint.md)** — Go interfaces, schemas, error recovery models, and async memory.
 - 🎨 **[A2UI Custom Component Catalog](docs/a2ui_custom_catalog.md)** — Specification for custom explosive badges, diff matrices, and Figma design tokens.
 - 🖌️ **[Figma Design Spec & Asset Guide](docs/figma_design_spec.md)** — Collaborative design specifications, vector layer hierarchies, and starter SVGs.
+- 🌱 **[Synthetic Data Seeding & Live Systems Guide](docs/synthetic_data_seeding_guide.md)** — 500-sample correlated generation and live seeding into Salesforce and ServiceNow Developer Sandboxes.
 - 🛠️ **[ADK & MCP Tools Reference Manual](docs/tools_reference.md)** — Comprehensive catalog of Pub/Sub, connector, DLP, and HITL tool schemas.
 - ⚙️ **[Operations & Day-2 Support Runbook](docs/operations_runbook.md)** — SRE guide for DLQ triage, secret rotation, and connector incident handling.
 - 🧪 **[Evaluation & Golden Benchmark Guide](docs/evaluation_benchmark.md)** — 500-sample synthetic dataset, 4 variance archetypes, and LLM-as-a-judge scoring.
@@ -85,9 +87,16 @@ All architectural design documents, runbooks, specifications, and papers are ava
 
 ## ⚡ Quickstart
 
-### 1. Generate Synthetic Data
+### 1. Generate Synthetic Data & Seed Live Environments
 ```bash
-go run cmd/synth/main.go --count=500 --output=tests/golden/discrepancies_golden.json
+# Generate 500 correlated enterprise transaction records
+go run cmd/synth/main.go --count=500 --output=data/correlated_recon_500.json
+
+# Seed live Salesforce Developer Org
+go run cmd/loader/main.go --target=salesforce --input=data/correlated_recon_500.json
+
+# Seed live ServiceNow Developer Instance
+go run cmd/loader/main.go --target=servicenow --input=data/correlated_recon_500.json
 ```
 
 ### 2. Run Automated Regression Suite

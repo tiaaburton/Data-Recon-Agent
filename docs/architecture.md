@@ -247,6 +247,67 @@ All prompts, tool payloads, and logged outputs pass through a Go middleware inte
 - **Scanned InfoTypes**: `EMAIL_ADDRESS`, `US_SOCIAL_SECURITY_NUMBER`, `CREDIT_CARD_NUMBER`, `PHONE_NUMBER`, `IBAN_CODE`, `PERSON_NAME`.
 - **Redaction Strategy**: In-memory token replacement with irreversible cryptographic masking (e.g., `[REDACTED_SSN_#9a2b]`) before writing to Firestore or emitting to Cloud Logging.
 
+### 3.6. Gemini Enterprise Native Integration & A2UI Streaming Protocol
+Gemini Enterprise (Gemini for Google Workspace & Gemini Enterprise Chat) acts as the primary conversational interface for business operators:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Business Operator
+    participant Gemini as Gemini Enterprise Chat
+    participant CloudRun as Go ADK 2.0 Cloud Run (BYO-MCP)
+    participant Mesh as Sub-Agent Mesh (SN/SF/SAP)
+
+    User->>Gemini: "Reconcile contract CTR-2026-001 with SAP invoice"
+    Gemini->>CloudRun: POST /api/v1/recon/trigger (OpenAPI Manifest + OIDC)
+    CloudRun->>Mesh: Parallel Goroutine Execution
+    Mesh-->>CloudRun: Real-time Live API Results
+    CloudRun-->>Gemini: SSE Stream: agent_thought + A2UI v0.8 Declarative Tree
+    Gemini-->>User: Renders Custom Explosive Badge & Interactive Diff Matrix
+```
+
+1. **OpenAPI 3.0 Manifest**: Exposes `/api/v1/recon/trigger` with strict JSON schema definitions for automated tool selection in Vertex AI Agent Engine.
+2. **Streaming Protocol**: Emits Server-Sent Events (SSE) providing real-time thought transparency (`event: agent_thought`) followed by declarative UI payloads (`event: a2ui_render`).
+3. **IAM Authentication**: Google-managed OIDC ID tokens validated via `google.golang.org/api/idtoken`.
+
+### 3.7. Synthetic Data Generation & Live Multi-System Seeding
+To provide genuine end-to-end reconciliation against live environments rather than static mocks, the system includes a dedicated data seeding engine (`cmd/synth` and `cmd/loader`):
+
+```mermaid
+graph LR
+    Synth["cmd/synth/main.go<br/><b>Correlated Data Generator</b>"] --> Golden["data/correlated_recon_500.json"]
+    Golden --> Loader["cmd/loader/main.go<br/><b>Multi-System Seeder</b>"]
+    Loader -->|Table API / OAuth| SN["ServiceNow Dev Sandbox<br/>(Live Incidents)"]
+    Loader -->|Composite REST API| SF["Salesforce Dev Org<br/>(Live Opportunities)"]
+    Loader -->|OData v4 Entity Injection| SAP["SAP S/4HANA OData<br/>(Invoices)"]
+```
+
+- **Correlated Relational Graph**: Generates 500 enterprise records sharing unified keys (`contract_id`, `correlation_id`, `account_id`) with precisely calibrated mathematical variances.
+- **Salesforce Seeder**: Direct REST composite upserts of accounts, contracts, and closed-won opportunities with custom discrepancy fields.
+- **ServiceNow Seeder**: Table API batch insertion of billing dispute incidents with root-cause categorization.
+
+---
+
+## 4. Handcrafted Pub/Sub Toolset Architecture
+
+### 4.1. The `google.adk.tools.pubsub` Toolset
+To guarantee reliable event-driven reconciliation, the agent integrates with the handcrafted `google.adk.tools.pubsub` module:
+- **`PubSubCredentialsConfig`**: Manages service account credentials and Google auth contexts.
+- **`PubSubToolConfig`**: Configures project IDs, topics, subscriptions, dead-letter topics, and pull thresholds.
+- **`PubSubToolset`**: Provides three core primitives:
+  1. `pull_messages`: Non-blocking batch retrieval with explicit base64 payload decoding.
+  2. `ack_messages`: Granular acknowledgment ensuring at-least-once delivery semantics.
+  3. `publish_message`: Emits discrepancy outcomes and routes poison messages to DLQ.
+
+---
+
+## 5. Security, DLP & Data Governance Architecture
+
+### 5.1. In-Flight Cloud Sensitive Data Protection (DLP)
+- All raw message payloads and user inputs are inspected and scrubbed before being stored in Firestore session memory or passed to sub-agents.
+- Built-in infoType detectors: `US_SOCIAL_SECURITY_NUMBER`, `CREDIT_CARD_NUMBER`, `IBAN_CODE`, `PERSON_NAME`, `EMAIL_ADDRESS`.
+- Redaction technique: Cryptographic bucketing and token replacement (e.g., `[SSN_REDACTED_1]`).
+
 ### 5.2. Cloud KMS & Secret Manager Integration
 - **Secret Manager**: Securely injects OAuth credentials, ServiceNow instance tokens, Salesforce connected app certificates, and SAP client secrets at container startup. Zero hardcoded secrets.
 - **Cloud KMS**: Single-region Customer-Managed Encryption Keys (CMEK) protect Firestore persistent storage, Cloud Storage golden datasets, and Pub/Sub event payloads.
@@ -286,9 +347,10 @@ Every tool call executes inside an Intent vs. Outcome decorator:
 
 ## 7. Testing & Verification Framework
 
-- **Golden Dataset**: Synthetic enterprise datasets in Cloud Storage (`gs://recon-golden-datasets/v1/`) containing 500+ parameterized reconciliation edge cases.
+- **Golden Dataset & Live Seeding**: Synthetic enterprise datasets in Cloud Storage (`gs://recon-golden-datasets/v1/`) and live sandbox seeding into ServiceNow and Salesforce.
 - **Automated Regression Suite**: Go test runner (`go test -v ./tests/...`) and prompt evaluation harness validating:
   1. Tool Schema Validation Accuracy (100% adherence to JSON schemas).
   2. Multi-Agent Routing Accuracy ($\ge 98.5\%$).
   3. PII Redaction Completeness ($100\%$).
   4. HITL Intercept Enforcement ($100\%$ mutations gated).
+  5. Live API Discrepancy Resolution across live ServiceNow & Salesforce endpoints.

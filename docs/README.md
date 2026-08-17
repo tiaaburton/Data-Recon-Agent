@@ -41,6 +41,7 @@ graph TD
 
 ### 1. Architecture & Design
 - **[System Architecture & RFC/TDD](architecture.md)**: Full Technical Design Document covering system topology, C4 container diagram, sequence flows, NFRs, Go ADK 2.0 multi-agent patterns, and GCP service boundaries.
+- **[Gemini Enterprise Integration Guide](gemini_enterprise_integration.md)**: Extension manifests, OpenAPI 3.0 tool schemas, Workload Identity OIDC authentication, and streaming A2UI custom catalog rendering.
 - **[Draw.io Visual Architecture Diagram](architecture.drawio)**: Openable in diagrams.net / Draw.io, containing pixel-perfect GCP service cards and themed containers.
 - **[Component Blueprint & Code Contracts](blueprint.md)**: Go structs, JSON schemas, SAP `MockReconciler` interface, guided error models, and async memory persistence engine.
 
@@ -48,7 +49,8 @@ graph TD
 - **[A2UI Custom Component Catalog & Styling Guide](a2ui_custom_catalog.md)**: Deep dive into the declarative A2UI v0.8 protocol, custom explosive variance badges, three-way diff tables, signed mutation cards, and Figma design token integration.
 - **[Figma Design Specification & Custom Asset Guide](figma_design_spec.md)**: Collaborative design specifications, vector layer hierarchies, color tokens, and starter SVG assets (e.g. `explosive_badge_v2.svg`).
 
-### 3. Toolsets, Operations & Benchmarks
+### 3. Data Generation, Toolsets & Operations
+- **[Synthetic Data Generation & Live System Seeding Guide](synthetic_data_seeding_guide.md)**: Comprehensive runbook for generating 500 correlated enterprise transactions and seeding live Salesforce and ServiceNow sandbox instances.
 - **[ADK & MCP Tools Reference Manual](tools_reference.md)**: Complete catalog of `google.adk.tools.pubsub`, ServiceNow, Salesforce, SAP OData, Cloud DLP, and HITL authorization tools.
 - **[Operations & Day-2 Support Runbook](operations_runbook.md)**: SRE standard operating procedures for Dead-Letter Queue (DLQ) replay, secret rotation, Cloud Monitoring metrics, and connector incident response.
 - **[Evaluation & Golden Benchmark Guide](evaluation_benchmark.md)**: 500-sample synthetic dataset distribution, 4 variance archetypes, and Gemini 3.1 Pro LLM-as-a-judge evaluation scoring matrix.

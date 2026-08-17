@@ -152,22 +152,103 @@ gcloud run deploy data-recon-server \
 
 ---
 
-## 5. Seed Synthetic Golden Datasets & Run Verification
+## 5. Seed Synthetic Data & Populate Live Environments
 
-### 5.1. Generate Synthetic Enterprise Data
-Run the Go data synthesizing tool to generate 500+ realistic reconciliation test cases:
+### 5.1. Generate Synthetic Correlated Enterprise Graph
+Run the Go data synthesizing tool to generate 500+ mathematically correlated reconciliation test cases:
 
 ```bash
-go run cmd/synth/main.go --count=500 --output=tests/golden/discrepancies_golden.json --seed=42
+go run cmd/synth/main.go \
+  --count=500 \
+  --variance-dist="40:match,30:timing,20:rounding,10:critical" \
+  --output="data/correlated_recon_500.json"
 ```
 
 Upload golden dataset to GCS for continuous regression evaluation:
 ```bash
-gsutil cp tests/golden/discrepancies_golden.json gs://${GCP_PROJECT_ID}-recon-golden-datasets/v1/
+gsutil cp data/correlated_recon_500.json gs://${GCP_PROJECT_ID}-recon-golden-datasets/v1/
 ```
 
-### 5.2. Execute Automated Evaluation Suite
-Run the test harness against the live mock and schema validators:
+### 5.2. Populate Live Salesforce Developer Org
+Seed the 500 correlated Accounts, Contracts, and Opportunities into your live Salesforce Sandbox:
+
+```bash
+export SFDC_INSTANCE_URL="https://your-org.my.salesforce.com"
+export SFDC_CLIENT_ID="your_connected_app_client_id"
+export SFDC_CLIENT_SECRET="your_connected_app_client_secret"
+export SFDC_USERNAME="admin@yourorg.com"
+export SFDC_PASSWORD="your_password_with_token"
+
+go run cmd/loader/main.go \
+  --target=salesforce \
+  --input="data/correlated_recon_500.json" \
+  --batch-size=50
+```
+
+### 5.3. Populate Live ServiceNow Developer Instance
+Seed the correlated dispute tickets and billing issue cases into ServiceNow:
+
+```bash
+export SERVICENOW_INSTANCE_URL="https://devXXXXX.service-now.com"
+export SERVICENOW_USER="admin"
+export SERVICENOW_PASSWORD="your_instance_password"
+
+go run cmd/loader/main.go \
+  --target=servicenow \
+  --input="data/correlated_recon_500.json" \
+  --batch-size=25
+```
+
+---
+
+## 6. Register Agent in Gemini Enterprise & Vertex AI Agent Engine
+
+### 6.1. Register Native Gemini Enterprise Extension
+Register the deployed Cloud Run service as an extension in Gemini Enterprise:
+
+```bash
+gcloud beta ai extensions create \
+  --display-name="Data Reconciliation Agent" \
+  --description="Autonomous multi-agent reconciliation across SAP, Salesforce, and ServiceNow" \
+  --openapi-spec="https://data-recon-server-xxxx-uc.a.run.app/openapi.json" \
+  --project="${GCP_PROJECT_ID}" \
+  --region="${GCP_REGION}"
+```
+
+### 6.2. Enable A2UI v0.8 Custom Catalog in Workspace Chat
+Ensure your Workspace Chat or Vertex Search and Conversation app points to the custom catalog manifest:
+```json
+{
+  "a2ui_custom_catalog": "https://data-recon-server-xxxx-uc.a.run.app/assets/a2ui/catalog.json"
+}
+```
+
+---
+
+## 7. Health Checks & Verification Commands
+
+Verify Agent Engine, Live Connectors, and Pub/Sub Event Loop:
+
+```bash
+# 1. Publish test discrepancy event to Pub/Sub
+gcloud pubsub topics publish recon-discrepancy-events \
+    --message='{"event_id":"evt-test-01","correlation_id":"corr-uuid-771","account_id":"ACC-88","account_name":"Acme Global","variance_amount":14250.0,"currency":"USD","severity":"CRITICAL","detected_at":"2026-08-16T23:00:00Z","description":"SAP Invoice INV-2026-9081 diverges from Salesforce Opportunity OPP-8821"}'
+
+# 2. Execute end-to-end reconciliation CLI against live Salesforce & ServiceNow
+go run cmd/agent/main.go --contract-id="CTR-2026-001" --mode="LIVE"
+
+# 3. Check Cloud Run logs for Intent vs Outcome capture and trace ID correlation
+gcloud logging read 'resource.type="cloud_run_revision" AND jsonPayload.component="IntentOutcomeLogger"' \
+    --limit=5 \
+    --format=json
+
+# 4. Verify Firestore session state persistence
+gcloud firestore documents list "projects/${GCP_PROJECT_ID}/databases/(default)/documents/recon_sessions"
+```
+
+---
+
+## 8. Execute Automated Regression & Benchmark Suite
 
 ```bash
 go test -v -race ./tests/...
@@ -179,6 +260,10 @@ Expected Output:
 --- PASS: TestToolSchemaValidation (0.04s)
 === RUN   TestCoordinatorWorkerOrchestration
 --- PASS: TestCoordinatorWorkerOrchestration (0.82s)
+=== RUN   TestLiveSalesforceConnector
+--- PASS: TestLiveSalesforceConnector (0.34s)
+=== RUN   TestLiveServiceNowConnector
+--- PASS: TestLiveServiceNowConnector (0.28s)
 === RUN   TestGuidedErrorRecovery
 --- PASS: TestGuidedErrorRecovery (0.02s)
 === RUN   TestDLPPIIRedaction
@@ -186,25 +271,5 @@ Expected Output:
 === RUN   TestHITLWebhookSignatureEnforcement
 --- PASS: TestHITLWebhookSignatureEnforcement (0.01s)
 PASS
-ok  	github.com/tiaaburton/Data-Recon-Agent/tests	1.04s
-```
-
----
-
-## 6. Health Checks & Verification Commands
-
-Verify Agent Engine and Pub/Sub Event Loop:
-
-```bash
-# 1. Publish test discrepancy event to Pub/Sub
-gcloud pubsub topics publish recon-discrepancy-events \
-    --message='{"event_id":"evt-test-01","correlation_id":"CORR-9912","account_id":"ACC-88","account_name":"Acme Global","variance_amount":15400.0,"currency":"USD","severity":"CRITICAL","detected_at":"2026-08-16T23:00:00Z","description":"SAP Invoice INV-99042 diverges from Salesforce Contract CTR-4401"}'
-
-# 2. Check Cloud Run logs for Intent vs Outcome capture and trace ID correlation
-gcloud logging read 'resource.type="cloud_run_revision" AND jsonPayload.component="IntentOutcomeLogger"' \
-    --limit=5 \
-    --format=json
-
-# 3. Verify Firestore session state persistence
-gcloud firestore documents list "projects/${GCP_PROJECT_ID}/databases/(default)/documents/recon_sessions"
+ok  	github.com/tiaaburton/Data-Recon-Agent/tests	1.66s
 ```

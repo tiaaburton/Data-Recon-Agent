@@ -424,3 +424,192 @@ func (h *HITLValidator) VerifyApproval(token SignedApprovalToken) error {
 	return nil
 }
 ```
+
+---
+
+## 7. Live Multi-System Seeder Contracts (`pkg/seeder/`)
+
+### 7.1. Salesforce Live Opportunity & Contract Seeder (`pkg/seeder/salesforce.go`)
+
+```go
+package seeder
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+type SalesforceLiveSeeder struct {
+	InstanceURL string
+	AccessToken string
+	HTTPClient  *http.Client
+}
+
+type SFOpportunitySeed struct {
+	Name          string  `json:"Name"`
+	Amount        float64 `json:"Amount"`
+	StageName     string  `json:"StageName"`
+	CloseDate     string  `json:"CloseDate"`
+	ContractID    string  `json:"Contract_Id__c"`
+	CorrelationID string  `json:"Correlation_Id__c"`
+}
+
+func NewSalesforceLiveSeeder(instanceURL, accessToken string) *SalesforceLiveSeeder {
+	return &SalesforceLiveSeeder{
+		InstanceURL: instanceURL,
+		AccessToken: accessToken,
+		HTTPClient:  &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func (s *SalesforceLiveSeeder) SeedOpportunity(ctx context.Context, opp SFOpportunitySeed) (string, error) {
+	endpoint := fmt.Sprintf("%s/services/data/v60.0/sobjects/Opportunity", s.InstanceURL)
+	payload, _ := json.Marshal(opp)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.HTTPClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("salesforce api error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("salesforce upsert failed with status %d", resp.StatusCode)
+	}
+
+	var res struct {
+		ID string `json:"id"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&res)
+	return res.ID, nil
+}
+```
+
+### 7.2. ServiceNow Live Dispute Ticket Seeder (`pkg/seeder/servicenow.go`)
+
+```go
+package seeder
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+type ServiceNowLiveSeeder struct {
+	InstanceURL string
+	Username    string
+	Password    string
+	HTTPClient  *http.Client
+}
+
+type SNIncidentSeed struct {
+	ShortDescription string `json:"short_description"`
+	Description      string `json:"description"`
+	Category         string `json:"category"`
+	Impact           string `json:"impact"`
+	Urgency          string `json:"urgency"`
+	CorrelationID    string `json:"correlation_id"`
+	DisputedAmount   string `json:"u_disputed_amount"`
+}
+
+func NewServiceNowLiveSeeder(instanceURL, username, password string) *ServiceNowLiveSeeder {
+	return &ServiceNowLiveSeeder{
+		InstanceURL: instanceURL,
+		Username:    username,
+		Password:    password,
+		HTTPClient:  &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func (s *ServiceNowLiveSeeder) SeedIncident(ctx context.Context, inc SNIncidentSeed) (string, error) {
+	endpoint := fmt.Sprintf("%s/api/now/table/incident", s.InstanceURL)
+	payload, _ := json.Marshal(inc)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return "", err
+	}
+	req.SetBasicAuth(s.Username, s.Password)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := s.HTTPClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("servicenow table api error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("servicenow table api returned status %d", resp.StatusCode)
+	}
+
+	var res struct {
+		Result struct {
+			SysID  string `json:"sys_id"`
+			Number string `json:"number"`
+		} `json:"result"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&res)
+	return res.Result.Number, nil
+}
+```
+
+---
+
+## 8. Gemini Enterprise Streaming Gateway Contract (`pkg/gateway/`)
+
+```go
+package gateway
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+type SSEStreamer struct {
+	writer  http.ResponseWriter
+	flusher http.Flusher
+}
+
+func NewSSEStreamer(w http.ResponseWriter) (*SSEStreamer, error) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return nil, fmt.Errorf("streaming unsupported by client connection")
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	return &SSEStreamer{writer: w, flusher: flusher}, nil
+}
+
+func (s *SSEStreamer) EmitThought(step, detail string) {
+	data, _ := json.Marshal(map[string]string{"step": step, "detail": detail})
+	fmt.Fprintf(s.writer, "event: agent_thought\ndata: %s\n\n", data)
+	s.flusher.Flush()
+}
+
+func (s *SSEStreamer) EmitA2UIPayload(payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(s.writer, "event: a2ui_render\ndata: %s\n\n", data)
+	s.flusher.Flush()
+	return nil
+}
+```
