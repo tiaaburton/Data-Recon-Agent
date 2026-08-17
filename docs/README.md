@@ -41,6 +41,7 @@ graph TD
 
 ### 1. Architecture & Design
 - **[System Architecture & RFC/TDD](architecture.md)**: Full Technical Design Document covering system topology, C4 container diagram, sequence flows, NFRs, Go ADK 2.0 multi-agent patterns, and GCP service boundaries.
+- **[Critical User Journeys (CUJs) & Scenario Catalog](critical_user_journeys.md)**: 5 enterprise reconciliation scenarios for *Apex Global Cloud Services*, user personas, natural language queries, and expected A2UI results.
 - **[Gemini Enterprise Integration Guide](gemini_enterprise_integration.md)**: Extension manifests, OpenAPI 3.0 tool schemas, Workload Identity OIDC authentication, and streaming A2UI custom catalog rendering.
 - **[Draw.io Visual Architecture Diagram](architecture.drawio)**: Openable in diagrams.net / Draw.io, containing pixel-perfect GCP service cards and themed containers.
 - **[Component Blueprint & Code Contracts](blueprint.md)**: Go structs, JSON schemas, SAP `MockReconciler` interface, guided error models, and async memory persistence engine.

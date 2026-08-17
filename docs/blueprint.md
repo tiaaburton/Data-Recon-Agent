@@ -10,97 +10,61 @@
 
 ```text
 Data-Recon-Agent/
-├── .github/
-│   └── workflows/
-│       ├── ci.yaml                   # Go lint, test, schema validation, and promptfoo eval
-│       └── cd.yaml                   # Cloud Run & Vertex AI Agent Engine deployment
-├── cmd/
-│   ├── server/                       # Main entrypoint: Cloud Run BYO-MCP & Webhook Server
-│   │   └── main.go
-│   └── synth/                        # CLI Synthetic Data Generator tool
-│       └── main.go
-├── docs/                             # Full architectural & deployment documentation
-│   ├── README.md
-│   ├── architecture.md
-│   ├── architecture.drawio
-│   ├── blueprint.md
-│   ├── deployment_guide.md
-│   ├── a2ui_custom_catalog.md
-│   ├── code_review_matrix.md
-│   ├── backlog_task_breakdown.md
-│   ├── blog_post.md
-│   ├── research_paper.md
-│   └── adr/                          # Architecture Decision Records
-│       ├── README.md
-│       ├── 0001-golang-agent-runtime.md
-│       ├── 0002-vertex-agent-engine-compaction.md
-│       ├── 0003-multi-agent-coordinator-async-memory.md
-│       ├── 0004-strategic-model-routing.md
-│       ├── 0005-hitl-signed-webhook-intercepts.md
-│       ├── 0006-cloud-dlp-pii-redaction.md
-│       ├── 0007-custom-a2ui-catalog-styling.md
-│       ├── 0008-pubsub-handcrafted-toolset.md
-│       └── 0009-byo-mcp-cloud-run-cmek.md
-├── pkg/
-│   ├── a2ui/                         # A2UI v0.8 declarative card builders & schemas
-│   │   ├── catalog.go
-│   │   ├── schemas.go
-│   │   └── templates.go
-│   ├── agent/                        # Core Go ADK 2.0 agent definitions & constitutions
-│   │   ├── coordinator.go
-│   │   ├── system_prompt.go
-│   │   └── router.go
-│   ├── compaction/                   # Token-based sliding window compaction engine
-│   │   └── compactor.go
-│   ├── connectors/                   # Enterprise 3P/1P connectors & SAP Mock
-│   │   ├── sap_mock.go               # MockReconciler interface & OData simulation
-│   │   ├── servicenow.go
-│   │   ├── salesforce.go
-│   │   ├── slack.go
-│   │   └── drive.go
-│   ├── errorhandling/                # Guided Error Handling structs & recovery advice
-│   │   └── errors.go
-│   ├── hitl/                         # Human-in-the-loop cryptographically signed gate
-│   │   └── webhook.go
-│   ├── memory/                       # Async memory engine (Goroutines + channels)
-│   │   └── async_store.go
-│   ├── middleware/                   # Cloud DLP PII redaction & OTel tracing
-│   │   ├── dlp_redactor.go
-│   │   └── otel_tracing.go
-│   ├── observability/                # slog structured logger with Intent vs Outcome
-│   │   ├── logger.go
-│   │   └── intent_outcome.go
-│   ├── pubsubtool/                   # google.adk.tools.pubsub Go implementation
-│   │   └── toolset.go
-│   ├── schemas/                      # Strict input/output JSON schemas with Go tags
-│   │   ├── discrepancy.go
-│   │   ├── tickets.go
-│   │   └── billing.go
-│   ├── synthetic/                    # High-speed synthetic data generator
-│   │   └── generator.go
-│   └── tools/                        # Handcrafted Go ADK 2.0 tool definitions
-│       ├── servicenow_tools.go
-│       ├── salesforce_tools.go
-│       └── sap_tools.go
-├── terraform/                        # Production GCP Infrastructure as Code
+├── .env.example                      # Base environment template (committed)
+├── .env.local.example                # Local sandbox credentials template (committed)
+├── .env.local                        # Local developer credentials (gitignored)
+├── .gitignore                        # Git ignore rules protecting local credentials
+├── main.go                           # Root server entrypoint: Cloud Run BYO-MCP & Gemini Extension
+├── go.mod                            # Go 1.22 module definition
+├── go.sum
+├── Dockerfile                        # Multi-stage optimized Go container build
+├── terraform/                        # Infrastructure as Code
 │   ├── main.tf
 │   ├── variables.tf
-│   ├── outputs.tf
-│   ├── terraform.tfvars.example
-│   └── modules/
-│       ├── agent_engine/
-│       ├── cloud_run/
-│       ├── firestore/
-│       ├── pubsub/
-│       └── security_kms/
-├── tests/                            # Automated Regression Suite & Golden Dataset Tests
-│   ├── golden/
-│   │   └── discrepancies_golden.json
-│   ├── eval_test.go
-│   └── mock_test.go
-├── go.mod
-├── go.sum
-└── README.md
+│   └── outputs.tf
+├── docs/                             # Complete documentation suite
+│   ├── README.md                     # Documentation hub
+│   ├── critical_user_journeys.md     # 5 Enterprise CUJs & natural language queries
+│   ├── architecture.md               # RFC/TDD & C4 diagrams
+│   ├── architecture.drawio           # Visual Draw.io diagram
+│   ├── blueprint.md                  # Go code contracts & interfaces
+│   ├── gemini_enterprise_integration.md # Extension manifest & SSE streaming
+│   ├── synthetic_data_seeding_guide.md  # Live Salesforce/ServiceNow seeding guide
+│   ├── figma_design_spec.md          # Vector asset specs & Figma tokens
+│   ├── a2ui_custom_catalog.md        # A2UI v0.8 declarative schema
+│   ├── tools_reference.md            # ADK & MCP tool reference manual
+│   ├── operations_runbook.md         # SRE Day-2 maintenance & DLQ replay
+│   ├── evaluation_benchmark.md       # 500-sample golden evaluation guide
+│   ├── code_review_matrix.md         # 95/95 compliance scorecard
+│   ├── backlog_task_breakdown.md     # 23-task implementation tracking
+│   ├── blog_post.md                  # Technical blog post
+│   ├── research_paper.md             # Formal research paper
+│   └── adr/                          # 9 Architecture Decision Records
+├── tools/                            # Standalone CLI tools (thin wrappers over pkg/)
+│   ├── synth/main.go                 # Calls pkg/synth.Generate()
+│   ├── loader/main.go                # Calls pkg/seeder.SeedAll()
+│   └── verifier/main.go              # Calls pkg/verifier.VerifyAll()
+├── pkg/                              # Modular, highly importable Go packages
+│   ├── a2ui/                         # A2UI v0.8 declarative card builders
+│   ├── agent/                        # Coordinator & sub-agent orchestrators
+│   ├── compaction/                   # Sliding window token compactor
+│   ├── connectors/                   # ServiceNow, Salesforce & SAP connectors
+│   ├── errorhandling/                # GuidedError recovery models
+│   ├── gateway/                      # Gemini Enterprise SSE streamer & OpenAPI
+│   ├── hitl/                         # Ed25519 & HMAC-SHA256 signature validator
+│   ├── memory/                       # Async channel persistence engine
+│   ├── middleware/                   # Cloud DLP PII redactor & OTel tracing
+│   ├── observability/                # slog structured Intent vs Outcome logger
+│   ├── pubsubtool/                   # google.adk.tools.pubsub implementation
+│   ├── router/                       # Strategic model selector (Flash 3.7 vs Pro 3.1)
+│   ├── schemas/                      # Strict JSON schemas & Go structs
+│   ├── seeder/                       # Live Salesforce & ServiceNow API seeders
+│   ├── synth/                        # High-speed correlated synthetic generator
+│   └── verifier/                     # Programmatic live data validation engine
+└── tests/                            # Integration tests & golden evaluation
+    ├── cuj_test.go                   # Verification of all 5 enterprise CUJs
+    ├── regression_test.go            # Automated regression suite
+    └── golden/                       # 500-sample benchmark datasets
 ```
 
 ---

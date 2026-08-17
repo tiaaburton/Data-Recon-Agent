@@ -67,6 +67,7 @@ graph LR
 All architectural design documents, runbooks, specifications, and papers are available in the [`docs/`](docs/) directory:
 
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
+- 🎯 **[Critical User Journeys (CUJs) & Scenario Catalog](docs/critical_user_journeys.md)** — 5 real enterprise scenarios for *Apex Global Cloud Services*, personas, natural language prompts, and A2UI results.
 - 🤖 **[Gemini Enterprise Integration Guide](docs/gemini_enterprise_integration.md)** — Extension manifests, OpenAPI 3.0 tool schemas, OIDC authentication, and streaming A2UI custom catalog rendering.
 - 📊 **[Draw.io Visual Architecture Diagram](docs/architecture.drawio)** — Visual diagram openable in Draw.io / diagrams.net.
 - 📐 **[Component Blueprint & Code Contracts](docs/blueprint.md)** — Go interfaces, schemas, error recovery models, and async memory.
@@ -90,16 +91,19 @@ All architectural design documents, runbooks, specifications, and papers are ava
 ### 1. Generate Synthetic Data & Seed Live Environments
 ```bash
 # Generate 500 correlated enterprise transaction records
-go run cmd/synth/main.go --count=500 --output=data/correlated_recon_500.json
+go run tools/synth/main.go --count=500 --output=data/correlated_recon_500.json
 
 # Seed live Salesforce Developer Org
-go run cmd/loader/main.go --target=salesforce --input=data/correlated_recon_500.json
+go run tools/loader/main.go --target=salesforce --input=data/correlated_recon_500.json
 
 # Seed live ServiceNow Developer Instance
-go run cmd/loader/main.go --target=servicenow --input=data/correlated_recon_500.json
+go run tools/loader/main.go --target=servicenow --input=data/correlated_recon_500.json
+
+# Programmatically validate seeded records across live APIs
+go run tools/verifier/main.go --input=data/correlated_recon_500.json
 ```
 
-### 2. Run Automated Regression Suite
+### 2. Run Automated Regression & CUJ Benchmark Suite
 ```bash
 go test -v -race ./tests/...
 ```
