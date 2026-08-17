@@ -69,9 +69,13 @@ All architectural design documents, runbooks, specifications, and papers are ava
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
 - 📊 **[Draw.io Visual Architecture Diagram](docs/architecture.drawio)** — Visual diagram openable in Draw.io / diagrams.net.
 - 📐 **[Component Blueprint & Code Contracts](docs/blueprint.md)** — Go interfaces, schemas, error recovery models, and async memory.
-- 🚀 **[Complete Redeployment Runbook](docs/deployment_guide.md)** — Step-by-step Terraform deployment and GCP configuration guide.
 - 🎨 **[A2UI Custom Component Catalog](docs/a2ui_custom_catalog.md)** — Specification for custom explosive badges, diff matrices, and Figma design tokens.
-- 💯 **[95/95 AgentOps Code Review Matrix](docs/code_review_matrix.md)** — Exhaustive compliance mapping across all 19 review criteria.
+- 🖌️ **[Figma Design Spec & Asset Guide](docs/figma_design_spec.md)** — Collaborative design specifications, vector layer hierarchies, and starter SVGs.
+- 🛠️ **[ADK & MCP Tools Reference Manual](docs/tools_reference.md)** — Comprehensive catalog of Pub/Sub, connector, DLP, and HITL tool schemas.
+- ⚙️ **[Operations & Day-2 Support Runbook](docs/operations_runbook.md)** — SRE guide for DLQ triage, secret rotation, and connector incident handling.
+- 🧪 **[Evaluation & Golden Benchmark Guide](docs/evaluation_benchmark.md)** — 500-sample synthetic dataset, 4 variance archetypes, and LLM-as-a-judge scoring.
+- 🚀 **[Complete Redeployment Runbook](docs/deployment_guide.md)** — Step-by-step Terraform deployment and GCP configuration guide.
+- 💯 **[95/95 AgentOps Code Review Matrix](docs/code_review_matrix.md)** — Exhaustive compliance scorecard showing code evidence across all 19 review criteria.
 - 📋 **[23-Task Technical Backlog](docs/backlog_task_breakdown.md)** — Master task status matrix and delivery phases.
 - ⚖️ **[Architecture Decision Records (ADRs)](docs/adr/)** — Formal ADR registry (ADR-0001 through ADR-0009).
 - 📰 **[Technical Blog Post](docs/blog_post.md)** — 5 Days of AI Agents engineering journey and custom A2UI showcase.

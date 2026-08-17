@@ -46,13 +46,19 @@ graph TD
 
 ### 2. Custom A2UI & User Experience
 - **[A2UI Custom Component Catalog & Styling Guide](a2ui_custom_catalog.md)**: Deep dive into the declarative A2UI v0.8 protocol, custom explosive variance badges, three-way diff tables, signed mutation cards, and Figma design token integration.
+- **[Figma Design Specification & Custom Asset Guide](figma_design_spec.md)**: Collaborative design specifications, vector layer hierarchies, color tokens, and starter SVG assets (e.g. `explosive_badge_v2.svg`).
 
-### 3. Deployment & Operations
+### 3. Toolsets, Operations & Benchmarks
+- **[ADK & MCP Tools Reference Manual](tools_reference.md)**: Complete catalog of `google.adk.tools.pubsub`, ServiceNow, Salesforce, SAP OData, Cloud DLP, and HITL authorization tools.
+- **[Operations & Day-2 Support Runbook](operations_runbook.md)**: SRE standard operating procedures for Dead-Letter Queue (DLQ) replay, secret rotation, Cloud Monitoring metrics, and connector incident response.
+- **[Evaluation & Golden Benchmark Guide](evaluation_benchmark.md)**: 500-sample synthetic dataset distribution, 4 variance archetypes, and Gemini 3.1 Pro LLM-as-a-judge evaluation scoring matrix.
+
+### 4. Deployment & Compliance
 - **[Complete Redeployment Runbook](deployment_guide.md)**: Step-by-step guide to provisioning GCP infrastructure via Terraform, configuring Secret Manager & connectors, building Go Cloud Run BYO-MCP containers, and seeding synthetic datasets.
 - **[95/95 AgentOps Code Review Matrix Mapping](code_review_matrix.md)**: Exhaustive compliance scorecard showing code evidence across all 19 criteria.
 - **[23-Task Technical Backlog Breakdown](backlog_task_breakdown.md)**: Tracking matrix of all 23 implementation tasks with priorities, categories, and milestone phases.
 
-### 4. Architecture Decision Records (ADRs)
+### 5. Architecture Decision Records (ADRs)
 - **[ADR Registry & Decision Framework](adr/README.md)**:
   - **[ADR-0001](adr/0001-golang-agent-runtime.md)**: Go (ADK 2.0) as Core Agent Runtime & Data Synthesizer
   - **[ADR-0002](adr/0002-vertex-agent-engine-compaction.md)**: Vertex AI Agent Engine with Native A2A & Token Compaction
@@ -64,6 +70,6 @@ graph TD
   - **[ADR-0008](adr/0008-pubsub-handcrafted-toolset.md)**: Handcrafted Pub/Sub Toolset with Base64 & Pull/Ack Streaming
   - **[ADR-0009](adr/0009-byo-mcp-cloud-run-cmek.md)**: BYO-MCP on Cloud Run with Single-Region CMEK & Secret Manager
 
-### 5. Publications & Thought Leadership
+### 6. Publications & Thought Leadership
 - **[Technical Blog Post](blog_post.md)**: "Beyond Default Widgets: Building an Autonomous Data Reconciliation Agent with Go ADK 2.0, Vertex AI A2A, and Custom A2UI Catalogs".
 - **[Academic / Industry Research Paper](research_paper.md)**: "Declarative Agent-to-UI (A2UI) Synthesis and Multi-Agent A2A Consensus in Enterprise Data Reconciliation: Protocol Design, Latency Optimization, and Cryptographic Governance in Go".
