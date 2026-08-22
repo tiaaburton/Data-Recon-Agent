@@ -86,11 +86,15 @@ When setting up a ServiceNow Personal Developer Instance (PDI) on `https://devXX
 In modern ServiceNow releases (Washington DC / Xanadu), inbound REST calls require explicit internal and API execution roles:
 1. In the Filter Navigator, navigate to **`sys_user.list`**.
 2. Open the **`admin`** user record (or your dedicated integration service user).
-3. Under the **Roles** related list at the bottom, click **Edit...** and assign:
-   - **`snc_platform_rest_api_access`** / **`snc_internal`**: Grants access to execute platform REST web services.
-   - **`snc_basic_api`**: Authorizes Basic Authentication requests against REST endpoints.
-   - **`rest_service`**: Authorizes general inbound REST Table API invocations.
-   - **`itil`**: Grants read and write permissions to the standard `incident` table.
+3. Under the **Roles** related list at the bottom, click **Edit...** and ensure the complete Administrator & Web Service role set is assigned:
+   - **`admin`**: Full platform administrative privileges.
+   - **`itil`**: Incident management read and write operations.
+   - **`itil_admin`**: ITIL administrative lifecycle control.
+   - **`rest_service`**: General inbound REST Table API execution.
+   - **`security_admin`**: Elevated security privileges for ACL management.
+   - **`snc_basic_auth_api_access`**: Authorizes Basic Authentication against platform web service endpoints.
+   - **`snc_platform_rest_api_access`**: Core authorization for platform REST APIs.
+   - **`snc_required_script_writer_permission`**: Script execution and dynamic field resolution privileges.
 4. Verify that **`Locked out`** is **Unchecked**, **`Password needs reset`** is **Unchecked**, and **`Active`** is **Checked**.
 
 #### 3. Data Policy Compliance for Incident Creation

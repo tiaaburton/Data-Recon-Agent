@@ -109,9 +109,13 @@ If ServiceNow or Salesforce undergoes planned maintenance or suffers an outage:
 If ServiceNow Table API returns `401 Unauthorized` or `403 Forbidden`:
 
 1. **Initial Browser Confirmation**: Confirm that the 1-time password confirmation screen was completed in the web browser (`https://devXXXXX.service-now.com`) so `password_needs_reset` is `false`.
-2. **Required Roles**: In `sys_user.list`, ensure the API user has:
-   - `snc_platform_rest_api_access` / `snc_internal`
-   - `snc_basic_api`
-   - `rest_service`
+2. **Required Roles**: In `sys_user.list`, ensure the API user has the complete role set:
+   - `admin`
    - `itil`
+   - `itil_admin`
+   - `rest_service`
+   - `security_admin`
+   - `snc_basic_auth_api_access`
+   - `snc_platform_rest_api_access`
+   - `snc_required_script_writer_permission`
 3. **Data Policy Compliance**: Ingest dispute tickets with `state = "2"` (In Progress) to prevent missing resolution code validation errors.
