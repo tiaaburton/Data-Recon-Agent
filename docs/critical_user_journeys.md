@@ -1,6 +1,6 @@
 # Critical User Journeys (CUJs) & Enterprise Scenario Catalog
 
-This document defines the real-world enterprise organization, personas, end-to-end **Critical User Journeys (CUJs)**, natural language prompts, agent execution traces, and expected interactive **A2UI v0.8** outcomes for the **Data Reconciliation Agent**.
+This document defines the real-world enterprise organization, personas, end-to-end **Critical User Journeys (CUJs)**, natural language prompts, agent execution traces, and expected interactive **A2UI v0.9** outcomes for the **Data Reconciliation Agent**.
 
 ---
 
@@ -72,7 +72,7 @@ graph TD
 3. **Strategic Router** (Routes to Gemini 3.1 Pro):
    - Calculates Net Variance: $\$145,000 - \$130,750 = +\$14,250$.
    - Cross-references ServiceNow Incident `INC0010042` which accounts for 100% of the variance.
-   - Synthesizes A2UI v0.8 Declarative Component Tree.
+   - Synthesizes A2UI v0.9 Declarative Component Tree.
 4. **HITL Intercept**:
    - Constructs HMAC-SHA256 `SignedApprovalToken` for applying a `$14,250.00` Credit Memo in SAP S/4HANA.
 

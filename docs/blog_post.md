@@ -14,7 +14,7 @@ Within days, you encounter the four horsemen of enterprise agent failure:
 3. **The "Boring Widget" Bottleneck**: Rendering high-stakes financial discrepancies in plain markdown tables or default chatbot buttons fails to give human operators the visual confidence to approve critical ERP mutations.
 4. **Safety & Compliance Gaps**: Accidentally leaking PII into logs or executing unverified database writes without cryptographic audit trails.
 
-During Google Cloud's **5 Days of AI Agents**, we redesigned our approach from first principles. Here is how we engineered the **Data Reconciliation Agent**—a high-performance, multi-agent ecosystem built in **Go (ADK 2.0)** on **Vertex AI Agent Engine**, featuring native **Agent-to-Agent (A2A)** collaboration, **Cloud DLP** in-flight sanitization, and a **custom A2UI v0.8 visual catalog**.
+During Google's [**5-Day AI Agents Intensive** on Kaggle](https://www.kaggle.com/learn-guide/5-day-ai-agents), we took the foundational agentic concepts—multi-agent orchestration, tool integration, long-term memory, evaluation, and productionization—and scaled them from classroom notebooks into a production-grade enterprise platform. Here is how we engineered the **Data Reconciliation Agent**—a high-performance, multi-agent ecosystem built in **Go (ADK 2.0)** on **Vertex AI Agent Engine**, featuring native **Agent-to-Agent (A2A)** collaboration, **Cloud DLP** in-flight sanitization, and a **custom A2UI v0.9 visual catalog**.
 
 ---
 
@@ -71,7 +71,7 @@ Why burn premium tokens on simple record fetches? Our routing interface dynamica
 
 Companies don't want default widgets. When a financial discrepancy represents a \$45,000 billing variance, an operator needs instantaneous visual hierarchy, clear side-by-side diffs, and cryptographic assurance before approving a credit memo.
 
-Using the **A2UI (Agent-to-UI) v0.8 Declarative Protocol**, our Go agent synthesizes structured JSON UI payloads interpreted by a custom frontend catalog:
+Using the **A2UI (Agent-to-UI) v0.9 Declarative Protocol**, our Go agent synthesizes structured JSON UI payloads interpreted by a custom frontend catalog:
 
 ### 💥 The Explosive Variance Alert Badge
 Instead of a tiny yellow text warning, critical discrepancies trigger our **Custom Explosive Badge** with a pulsing red container and high-visibility financial magnitude display.

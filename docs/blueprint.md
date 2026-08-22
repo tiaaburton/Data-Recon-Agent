@@ -2,7 +2,7 @@
 
 - **Language & Runtime**: Go 1.22+ (ADK 2.0)
 - **Framework**: Vertex AI Agent Engine, Google Cloud ADK (Go)
-- **Protocol**: Agent-to-Agent (A2A), Agent-to-UI (A2UI v0.8), Model Context Protocol (MCP)
+- **Protocol**: Agent-to-Agent (A2A), Agent-to-UI (A2UI v0.9), Model Context Protocol (MCP)
 
 ---
 
@@ -31,7 +31,7 @@ Data-Recon-Agent/
 │   ├── gemini_enterprise_integration.md # Extension manifest & SSE streaming
 │   ├── synthetic_data_seeding_guide.md  # Live Salesforce/ServiceNow seeding guide
 │   ├── figma_design_spec.md          # Vector asset specs & Figma tokens
-│   ├── a2ui_custom_catalog.md        # A2UI v0.8 declarative schema
+│   ├── a2ui_custom_catalog.md        # A2UI v0.9 declarative schema
 │   ├── tools_reference.md            # ADK & MCP tool reference manual
 │   ├── operations_runbook.md         # SRE Day-2 maintenance & DLQ replay
 │   ├── evaluation_benchmark.md       # 500-sample golden evaluation guide
@@ -45,7 +45,7 @@ Data-Recon-Agent/
 │   ├── loader/main.go                # Calls pkg/seeder.SeedAll()
 │   └── verifier/main.go              # Calls pkg/verifier.VerifyAll()
 ├── pkg/                              # Modular, highly importable Go packages
-│   ├── a2ui/                         # A2UI v0.8 declarative card builders
+│   ├── a2ui/                         # A2UI v0.9 declarative card builders
 │   ├── agent/                        # Coordinator & sub-agent orchestrators
 │   ├── compaction/                   # Sliding window token compactor
 │   ├── connectors/                   # ServiceNow, Salesforce & SAP connectors

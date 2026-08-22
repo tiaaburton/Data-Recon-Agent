@@ -39,7 +39,7 @@ This document provides a comprehensive mapping of the **Data Reconciliation Agen
 - **Guided Error Returns**: When an entity is missing, `NewNotFoundError()` provides the LLM with the exact alternative discovery tool name and search parameter to self-heal without failing the conversation.
 
 ### 2. Context & Memory (20 / 20)
-- **Agent Constitution**: The system prompt in `pkg/agent/system_prompt.go` enforces strict behavioral invariants: "Never execute an ERP write mutation without human confirmation; Always emit A2UI v0.8 compliant declarative JSON; Always check for PII before responding."
+- **Agent Constitution**: The system prompt in `pkg/agent/system_prompt.go` enforces strict behavioral invariants: "Never execute an ERP write mutation without human confirmation; Always emit A2UI v0.9 compliant declarative JSON; Always check for PII before responding."
 - **Context Compaction**: Implements sliding window history compaction with token threshold calculation and asynchronous memory summarization to prevent context window exhaustion.
 
 ### 3. Orchestration & Logic (20 / 20)

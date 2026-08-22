@@ -1,6 +1,6 @@
 # Figma Design Specification & Custom Asset Guide
 
-This specification defines the visual standards, vector asset guidelines, design tokens, and collaboration points for creating custom UI components in the **A2UI v0.8 Catalog**.
+This specification defines the visual standards, vector asset guidelines, design tokens, and collaboration points for creating custom UI components in the **A2UI v0.9 Catalog**.
 
 ---
 

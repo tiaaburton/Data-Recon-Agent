@@ -2,7 +2,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Vertex_AI-4285F4?style=flat&logo=googlecloud)](https://cloud.google.com/vertex-ai)
-[![Agent Protocol](https://img.shields.io/badge/A2UI-v0.8_Declarative-8430CE?style=flat)](docs/a2ui_custom_catalog.md)
+[![Agent Protocol](https://img.shields.io/badge/A2UI-v0.9_Declarative-8430CE?style=flat)](docs/a2ui_custom_catalog.md)
 [![Scorecard](https://img.shields.io/badge/AgentOps_Review-95%2F95_Points-188038?style=flat)](docs/code_review_matrix.md)
 
 An autonomous, enterprise-grade multi-agent data reconciliation platform built in **Go (ADK 2.0)** and hosted on **Google Cloud Platform (GCP)** via **Vertex AI Agent Engine** and **Cloud Run (BYO-MCP)**.
@@ -15,7 +15,7 @@ Cross-system discrepancies between **ServiceNow** (ITSM/tickets), **Salesforce**
 
 1. **High-Performance Go Runtime (ADK 2.0)**: Sub-second concurrent sub-agent execution, asynchronous long-term memory via channels, and strict struct-tag JSON schema compilation.
 2. **Strategic Model Routing**: Dynamic routing between **Gemini 3.7 Flash Preview** (sub-450ms lookups) and **Gemini 3.1 Pro** (complex multi-way reconciliation).
-3. **Custom A2UI v0.8 Visual Catalog**: Replaces generic chatbot widgets with branded, interactive **Explosive Variance Badges**, **Three-Way Diff Matrices**, and **HITL Signed Mutation Cards**.
+3. **Custom A2UI v0.9 Visual Catalog**: Replaces generic chatbot widgets with branded, interactive **Explosive Variance Badges**, **Three-Way Diff Matrices**, and **HITL Signed Mutation Cards**.
 4. **Enterprise Security & Privacy**: In-flight PII redaction via **Cloud Sensitive Data Protection (DLP)**, Single-Region **Cloud KMS CMEK**, and cryptographically signed webhooks for ERP write actions.
 
 ---

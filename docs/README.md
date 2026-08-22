@@ -47,7 +47,7 @@ graph TD
 - **[Component Blueprint & Code Contracts](blueprint.md)**: Go structs, JSON schemas, SAP `MockReconciler` interface, guided error models, and async memory persistence engine.
 
 ### 2. Custom A2UI & User Experience
-- **[A2UI Custom Component Catalog & Styling Guide](a2ui_custom_catalog.md)**: Deep dive into the declarative A2UI v0.8 protocol, custom explosive variance badges, three-way diff tables, signed mutation cards, and Figma design token integration.
+- **[A2UI Custom Component Catalog & Styling Guide](a2ui_custom_catalog.md)**: Deep dive into the declarative A2UI v0.9 protocol, custom explosive variance badges, three-way diff tables, signed mutation cards, and Figma design token integration.
 - **[Figma Design Specification & Custom Asset Guide](figma_design_spec.md)**: Collaborative design specifications, vector layer hierarchies, color tokens, and starter SVG assets (e.g. `explosive_badge_v2.svg`).
 
 ### 3. Data Generation, Toolsets & Operations
@@ -69,7 +69,7 @@ graph TD
   - **[ADR-0004](adr/0004-strategic-model-routing.md)**: Strategic Model Routing (Gemini 3.7 Flash Preview vs Gemini 3.1 Pro)
   - **[ADR-0005](adr/0005-hitl-signed-webhook-intercepts.md)**: Cryptographically Signed Webhook Intercepts for HITL Mutations
   - **[ADR-0006](adr/0006-cloud-dlp-pii-redaction.md)**: In-Flight PII Redaction via Cloud Sensitive Data Protection (DLP)
-  - **[ADR-0007](adr/0007-custom-a2ui-catalog-styling.md)**: Custom A2UI v0.8 Catalog over Generic Chatbot Widgets
+  - **[ADR-0007](adr/0007-custom-a2ui-catalog-styling.md)**: Custom A2UI v0.9 Catalog over Generic Chatbot Widgets
   - **[ADR-0008](adr/0008-pubsub-handcrafted-toolset.md)**: Handcrafted Pub/Sub Toolset with Base64 & Pull/Ack Streaming
   - **[ADR-0009](adr/0009-byo-mcp-cloud-run-cmek.md)**: BYO-MCP on Cloud Run with Single-Region CMEK & Secret Manager
 

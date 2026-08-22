@@ -1,6 +1,6 @@
 # A2UI Custom Component Catalog & Advanced Styling Architecture
 
-- **Protocol Version**: A2UI (Agent-to-UI) v0.8
+- **Protocol Version**: A2UI (Agent-to-UI) v0.9
 - **Core Philosophy**: Enterprise Declarative UI Synthesis over Generic Chatbot Widgets
 - **Target Surfaces**: Gemini Enterprise Web Workspace, Vertex AI Agent Engine UI, Custom Enterprise Portals
 - **Design Tokens**: Material Design 3 Extended Semantic Token System + Custom Figma Brand Kit
@@ -21,7 +21,7 @@ For high-stakes enterprise workflows—such as **Data Reconciliation across Serv
 3. **No Dynamic Visual Urgency**: Enterprise operators need instantaneous visual hierarchy (e.g. explosive variance badges for high-value financial drift vs subtle muted pills for minor SLA discrepancies).
 
 ### 1.2. The Custom A2UI Solution
-The Data Reconciliation Agent emits declarative **A2UI v0.8 JSON payloads** interpreted by a custom frontend renderer. Instead of generating raw HTML/CSS, the agent returns structured semantic component schemas that render pixel-perfect, accessible, and theme-compliant UI cards.
+The Data Reconciliation Agent emits declarative **A2UI v0.9 JSON payloads** interpreted by a custom frontend renderer. Instead of generating raw HTML/CSS, the agent returns structured semantic component schemas that render pixel-perfect, accessible, and theme-compliant UI cards.
 
 ---
 
@@ -51,7 +51,7 @@ Highlights critical anomalies with an explosive visual callout, severity tag, an
 ```json
 {
   "type": "a2ui.card.discrepancy_alert",
-  "version": "0.8.0",
+  "version": "v0.9",
   "properties": {
     "badge_variant": "explosive_urgent",
     "severity": "CRITICAL",
@@ -88,7 +88,7 @@ Provides interactive side-by-side comparison across ServiceNow, Salesforce, and 
 ```json
 {
   "type": "a2ui.widget.multi_system_diff",
-  "version": "0.8.0",
+  "version": "v0.9",
   "properties": {
     "correlation_id": "RECON-2026-0816-092",
     "columns": [
@@ -136,7 +136,7 @@ Empowers human operators to select canonical resolution actions directly from th
 ```json
 {
   "type": "a2ui.form.resolution_selector",
-  "version": "0.8.0",
+  "version": "v0.9",
   "properties": {
     "resolution_options": [
       {
@@ -178,7 +178,7 @@ Renders high-security cryptographic authorization stamps before executing ERP wr
 ```json
 {
   "type": "a2ui.card.signed_mutation",
-  "version": "0.8.0",
+  "version": "v0.9",
   "properties": {
     "mutation_id": "MUT-78921",
     "target_system": "SAP S/4HANA (Production)",

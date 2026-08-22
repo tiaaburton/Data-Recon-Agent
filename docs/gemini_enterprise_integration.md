@@ -23,7 +23,7 @@ sequenceDiagram
     WorkerMesh->>Systems: Live REST / SOQL Queries against SF & ServiceNow
     Systems-->>WorkerMesh: Return Opportunity & Incident Records
     WorkerMesh-->>GoCoordinator: Aggregate Findings & Discrepancies
-    GoCoordinator->>GoCoordinator: Synthesize A2UI v0.8 Declarative Payload
+    GoCoordinator->>GoCoordinator: Synthesize A2UI v0.9 Declarative Payload
     GoCoordinator-->>AgentEngine: Stream Server-Sent Events (SSE) + A2UI Payload
     AgentEngine-->>Gemini: Render Native Custom A2UI Card (Explosive Badge + 3-Way Diff)
     Gemini-->>User: Interactive Visual Reconciliation Card with Action Buttons
@@ -53,7 +53,7 @@ To register the Data Reconciliation Agent as a native extension in Gemini Enterp
   "capabilities": {
     "streaming": true,
     "a2ui_renderer": {
-      "version": "0.8",
+      "version": "0.9",
       "custom_catalog_url": "https://data-recon-agent-xxxx-uc.a.run.app/assets/a2ui/catalog.json"
     }
   }
@@ -132,7 +132,7 @@ components:
           type: number
         a2ui_payload:
           type: object
-          description: A2UI v0.8 Declarative Component Tree (Diff Matrix, Explosive Badges, Signed Action Cards)
+          description: A2UI v0.9 Declarative Component Tree (Diff Matrix, Explosive Badges, Signed Action Cards)
 ```
 
 ---
@@ -179,7 +179,7 @@ data: {"step": "QUERY_SAP", "detail": "Retrieved Invoice #INV-2026-9081 ($145,00
 
 event: a2ui_render
 data: {
-  "version": "0.8",
+  "version": "v0.9",
   "root": {
     "component": "ReconciliationCard",
     "properties": {

@@ -11,7 +11,7 @@
 
 Enterprise data reconciliation across heterogeneous systems of record (e.g., ServiceNow, Salesforce, SAP S/4HANA) is traditionally constrained by high human cognitive load, complex schema mappings, and slow multi-portal investigations. While Large Language Model (LLM) agents offer promising capabilities for semantic data arbitration, existing monolithic agent architectures suffer from context degradation, high turn latency, insecure uncontrolled write mutations, and rudimentary user interface affordances ("generic chatbot widgets").
 
-In this paper, we present the architecture and empirical evaluation of the **Data Reconciliation Agent**, a high-concurrency multi-agent system implemented in **Go (ADK 2.0)** and hosted on **Google Cloud Platform (GCP)** via **Vertex AI Agent Engine** and **Cloud Run**. We introduce two core contributions: (1) an **Agent-to-Agent (A2A)** Coordinator-Worker consensus protocol that achieves sub-second cross-system delta arbitration using concurrent Goroutines and dynamic model routing (Gemini 3.7 Flash Preview vs. Gemini 3.1 Pro); and (2) the **Agent-to-UI (A2UI) v0.8 Declarative Protocol**, which enables LLMs to emit deterministic, type-safe visual component schemas (e.g., explosive variance badges, interactive three-way diff matrices, and cryptographically signed mutation cards) rather than raw text or generic widgets. 
+In this paper, we present the architecture and empirical evaluation of the **Data Reconciliation Agent**, a high-concurrency multi-agent system implemented in **Go (ADK 2.0)** and hosted on **Google Cloud Platform (GCP)** via **Vertex AI Agent Engine** and **Cloud Run**. We introduce two core contributions: (1) an **Agent-to-Agent (A2A)** Coordinator-Worker consensus protocol that achieves sub-second cross-system delta arbitration using concurrent Goroutines and dynamic model routing (Gemini 3.7 Flash Preview vs. Gemini 3.1 Pro); and (2) the **Agent-to-UI (A2UI) v0.9 Declarative Protocol**, which enables LLMs to emit deterministic, type-safe visual component schemas (e.g., explosive variance badges, interactive three-way diff matrices, and cryptographically signed mutation cards) rather than raw text or generic widgets. 
 
 Empirical benchmarks against a 500-instance golden dataset demonstrate a **83.5% reduction in p95 end-to-end latency** compared to standard interpreted runtimes, **100% PII redaction accuracy** via in-line Cloud DLP middleware, and zero unauthorized database mutations through cryptographic Human-in-the-Loop (HITL) authorization gates.
 
@@ -35,7 +35,7 @@ graph LR
     SNWorker --> Consensus["Delta Engine & Multi-Agent Consensus"]
     SFWorker --> Consensus
     SAPWorker --> Consensus
-    Consensus --> A2UI["Declarative A2UI v0.8 Synthesis"]
+    Consensus --> A2UI["Declarative A2UI v0.9 Synthesis"]
     A2UI --> UI["Custom A2UI Catalog (Explosive Badge / Diff Matrix)"]
     UI --> HITL["Cryptographic HITL Gate (Ed25519)"]
 ```
@@ -63,12 +63,12 @@ This dynamic routing policy reduces total inference compute cost by **64.2%** ac
 
 ---
 
-## 3. The A2UI (Agent-to-UI) v0.8 Declarative Protocol
+## 3. The A2UI (Agent-to-UI) v0.9 Declarative Protocol
 
 ### 3.1. Declarative UI Synthesis over Imperative Code
 Traditional generative UI approaches attempt to have the LLM write raw HTML, React JSX, or CSS. This introduces severe security vulnerabilities (XSS), non-deterministic visual layouts, and high rendering latency. 
 
-Under the **A2UI v0.8 Declarative Protocol**, the agent emits pure semantic JSON conforming to strict JSON Schemas:
+Under the **A2UI v0.9 Declarative Protocol**, the agent emits pure semantic JSON conforming to strict JSON Schemas:
 
 $$\text{AgentOutput} \to \mathcal{S}_{\text{A2UI}} = \langle \text{ComponentType}, \text{Props}, \text{DataBinding}, \text{Actions} \rangle$$
 
@@ -123,12 +123,12 @@ Performance Highlights:
 
 ## 7. Conclusion
 
-The integration of **Go (ADK 2.0)**, **Vertex AI Agent Engine**, **A2A multi-agent consensus**, and declarative **A2UI v0.8 custom catalogs** represents a foundational step forward in enterprise agentic engineering. By separating data retrieval into concurrent specialized sub-agents, enforcing cryptographic Human-in-the-Loop validation, and replacing generic widgets with rich, domain-specific visual components, enterprises can deploy autonomous data reconciliation agents with high performance, strict compliance, and superior user experience.
+The integration of **Go (ADK 2.0)**, **Vertex AI Agent Engine**, **A2A multi-agent consensus**, and declarative **A2UI v0.9 custom catalogs** represents a foundational step forward in enterprise agentic engineering. By separating data retrieval into concurrent specialized sub-agents, enforcing cryptographic Human-in-the-Loop validation, and replacing generic widgets with rich, domain-specific visual components, enterprises can deploy autonomous data reconciliation agents with high performance, strict compliance, and superior user experience.
 
 ---
 
 ## References
 1. Google Cloud. *Vertex AI Agent Engine Architecture and A2A Protocol Reference*. 2026.
-2. Google Cloud. *Declarative Agent-to-UI (A2UI) Specification v0.8*. 2026.
+2. Google Cloud. *Declarative Agent-to-UI (A2UI) Specification v0.9*. 2026.
 3. Google Cloud. *Cloud Sensitive Data Protection (DLP) Architecture Guide*. 2026.
 4. Go Language Team. *Efficient Concurrency with Goroutines and Channels in Go 1.22+*. 2024.

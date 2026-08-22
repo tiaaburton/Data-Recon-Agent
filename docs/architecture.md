@@ -5,7 +5,7 @@
 - **Core Runtime**: Go 1.22+ (ADK 2.0)
 - **Primary Cloud Platform**: Google Cloud Platform (GCP)
 - **AI Infrastructure**: Vertex AI Agent Engine, Gemini 3.7 Flash Preview / Gemini 3.1 Pro, Vertex AI Model Garden
-- **A2UI Protocol**: Declarative Agent-to-UI (A2UI) v0.8 Custom Component Catalog
+- **A2UI Protocol**: Declarative Agent-to-UI (A2UI) v0.9 Custom Component Catalog
 
 ---
 
@@ -41,7 +41,7 @@ The **Data Reconciliation Agent** is an autonomous, high-throughput, multi-agent
 ```mermaid
 graph TB
     subgraph ClientLayer ["1. Client & Ingress Tier"]
-        GeminiUI["Gemini Enterprise Chat / Web Workspace<br/><b>Custom A2UI v0.8 Catalog</b>"]
+        GeminiUI["Gemini Enterprise Chat / Web Workspace<br/><b>Custom A2UI v0.9 Catalog</b>"]
         SlackClient["Slack Enterprise Grid / Webhook"]
         ApprovalPortal["HITL Approval Gateway / Webhook"]
     end
@@ -228,7 +228,7 @@ The agent integrates the experimental handcrafted `google.adk.tools.pubsub` tool
 ### 4.1. The Need for Custom A2UI over Generic Widgets
 Standard chatbot responses in enterprise environments (plain text, markdown tables, or generic bot buttons) fail to convey the multi-dimensional complexity of financial and SLA data reconciliation. 
 
-The Data Reconciliation Agent utilizes the **A2UI v0.8 Declarative Protocol** with a custom component catalog:
+The Data Reconciliation Agent utilizes the **A2UI v0.9 Declarative Protocol** with a custom component catalog:
 
 | Custom A2UI Component | Function | Visual Style & Figma Design Tokens |
 | :--- | :--- | :--- |
@@ -262,7 +262,7 @@ sequenceDiagram
     Gemini->>CloudRun: POST /api/v1/recon/trigger (OpenAPI Manifest + OIDC)
     CloudRun->>Mesh: Parallel Goroutine Execution
     Mesh-->>CloudRun: Real-time Live API Results
-    CloudRun-->>Gemini: SSE Stream: agent_thought + A2UI v0.8 Declarative Tree
+    CloudRun-->>Gemini: SSE Stream: agent_thought + A2UI v0.9 Declarative Tree
     Gemini-->>User: Renders Custom Explosive Badge & Interactive Diff Matrix
 ```
 
