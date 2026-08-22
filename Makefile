@@ -32,12 +32,31 @@ help: ## Show this help message and target descriptions
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(RESET) %s\n", $$1, $$2}'
 	@echo ""
 	@echo -e "$(YELLOW)Example Commands:$(RESET)"
+	@echo -e "  make setup-env                       # Interactive configuration for .env.local"
 	@echo -e "  make synth COUNT=500                 # Generate 500 correlated records"
 	@echo -e "  make seed-dry-run                    # Simulate seeding without API calls"
 	@echo -e "  make seed-sample LIMIT=5             # Load 5 test records into SFDC and ServiceNow"
-	@echo -e "  make seed                            # Load all records into both sandboxes"
+	@echo -e "  make seed                            # Load all records (prompts with choices if credentials missing)"
 	@echo -e "  make verify                          # Validate live record count and correlation"
-	@echo -e "  make test                            # Run test suites"
+
+# ------------------------------------------------------------------------------
+# 0. Environment & Credentials Setup
+# ------------------------------------------------------------------------------
+
+.PHONY: setup-env
+setup-env: ## Interactively configure or verify .env.local credentials
+	@if [ ! -f .env.local ]; then \
+		echo -e "$(YELLOW)--> .env.local not found. Creating from .env.local.example...$(RESET)"; \
+		cp .env.local.example .env.local; \
+	fi
+	@echo -e "$(CYAN)--> Checking local environment credentials in .env.local...$(RESET)"
+	@source .env.local 2>/dev/null || true; \
+	echo -e "  Salesforce Instance: $${SFDC_INSTANCE_URL:-[NOT SET]}"; \
+	echo -e "  Salesforce User:     $${SFDC_USERNAME:-[NOT SET]}"; \
+	echo -e "  ServiceNow Instance: $${SERVICENOW_INSTANCE_URL:-[NOT SET]}"; \
+	echo -e "  ServiceNow User:     $${SERVICENOW_USERNAME:-[NOT SET]}"; \
+	echo ""; \
+	echo -e "$(GREEN)Tip:$(RESET) If credentials are missing when running 'make seed', the tool will interactively prompt you with choices (Enter now / Dry-run / Skip)."
 
 # ------------------------------------------------------------------------------
 # 1. Data Synthesis Targets
@@ -69,7 +88,7 @@ seed-sample: ## Seed a small sample (default 5 records) into Salesforce and Serv
 	@go run cmd/loader/main.go --input=$(OUTPUT) --target=all --limit=$(if $(filter 0,$(LIMIT)),5,$(LIMIT))
 
 .PHONY: seed
-seed: ## Seed all dataset records into both Salesforce and ServiceNow
+seed: ## Seed all dataset records (prompts with interactive choices if credentials missing)
 	@echo -e "$(CYAN)--> Seeding all records to Salesforce and ServiceNow...$(RESET)"
 	@go run cmd/loader/main.go --input=$(OUTPUT) --target=$(TARGET) --limit=$(LIMIT)
 
