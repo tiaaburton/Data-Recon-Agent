@@ -20,7 +20,6 @@ graph TD
     Scorecard["💯 95/95 Review Matrix<br/>(docs/code_review_matrix.md)"]
     Backlog["📋 23-Task Breakdown<br/>(docs/backlog_task_breakdown.md)"]
     Blog["📰 Technical Blog Post<br/>(docs/blog_post.md)"]
-    Paper["📄 Research Paper<br/>(docs/research_paper.md)"]
     ADR["⚖️ Architecture Decisions<br/>(docs/adr/)"]
 
     Hub --> Arch
@@ -31,7 +30,6 @@ graph TD
     Hub --> Scorecard
     Hub --> Backlog
     Hub --> Blog
-    Hub --> Paper
     Hub --> ADR
 ```
 
@@ -75,4 +73,3 @@ graph TD
 
 ### 6. Publications & Thought Leadership
 - **[Technical Blog Post](blog_post.md)**: "Beyond Default Widgets: Building an Autonomous Data Reconciliation Agent with Go ADK 2.0, Vertex AI A2A, and Custom A2UI Catalogs".
-- **[Academic / Industry Research Paper](research_paper.md)**: "Declarative Agent-to-UI (A2UI) Synthesis and Multi-Agent A2A Consensus in Enterprise Data Reconciliation: Protocol Design, Latency Optimization, and Cryptographic Governance in Go".

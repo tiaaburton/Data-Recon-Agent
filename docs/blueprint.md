@@ -38,7 +38,6 @@ Data-Recon-Agent/
 │   ├── code_review_matrix.md         # 95/95 compliance scorecard
 │   ├── backlog_task_breakdown.md     # 23-task implementation tracking
 │   ├── blog_post.md                  # Technical blog post
-│   ├── research_paper.md             # Formal research paper
 │   └── adr/                          # 9 Architecture Decision Records
 ├── tools/                            # Standalone CLI tools (thin wrappers over pkg/)
 │   ├── synth/main.go                 # Calls pkg/synth.Generate()

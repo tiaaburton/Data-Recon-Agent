@@ -82,7 +82,6 @@ All architectural design documents, runbooks, specifications, and papers are ava
 - 📋 **[23-Task Technical Backlog](docs/backlog_task_breakdown.md)** — Master task status matrix and delivery phases.
 - ⚖️ **[Architecture Decision Records (ADRs)](docs/adr/)** — Formal ADR registry (ADR-0001 through ADR-0009).
 - 📰 **[Technical Blog Post](docs/blog_post.md)** — 5 Days of AI Agents engineering journey and custom A2UI showcase.
-- 📄 **[Research Paper](docs/research_paper.md)** — Academic/industry paper on declarative A2UI synthesis and A2A multi-agent consensus.
 
 ---
 
