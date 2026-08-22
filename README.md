@@ -11,12 +11,12 @@ An autonomous, enterprise-grade multi-agent data reconciliation platform built i
 
 ## 🌟 Executive Overview
 
-Cross-system discrepancies between **ServiceNow** (ITSM/tickets), **Salesforce** (CRM/contracts), and **SAP S/4HANA** (ERP/billing) cost enterprises thousands of operational hours. The **Data Reconciliation Agent** solves this through:
+Cross-system discrepancies between **Salesforce** (CRM, Revenue Cloud, Commercial Contract Caps) and **ServiceNow** (ITSM, Service Outage Incidents, SLA Dispute Credits) cost enterprises thousands of operational hours. The **Data Reconciliation Agent** solves this through:
 
 1. **High-Performance Go Runtime (ADK 2.0)**: Sub-second concurrent sub-agent execution, asynchronous long-term memory via channels, and strict struct-tag JSON schema compilation.
 2. **Strategic Model Routing**: Dynamic routing between **Gemini 3.7 Flash Preview** (sub-450ms lookups) and **Gemini 3.1 Pro** (complex multi-way reconciliation).
-3. **Custom A2UI v0.9 Visual Catalog**: Replaces generic chatbot widgets with branded, interactive **Explosive Variance Badges**, **Three-Way Diff Matrices**, and **HITL Signed Mutation Cards**.
-4. **Enterprise Security & Privacy**: In-flight PII redaction via **Cloud Sensitive Data Protection (DLP)**, Single-Region **Cloud KMS CMEK**, and cryptographically signed webhooks for ERP write actions.
+3. **Custom A2UI v0.9 Visual Catalog**: Replaces generic chatbot widgets with branded, interactive **Explosive Variance Badges**, **Side-by-Side Diff Tables**, **Interactive Action Selectors**, and **HITL Signed Mutation Cards**.
+4. **Enterprise Security & Privacy**: In-flight PII redaction via **Cloud Sensitive Data Protection (DLP)**, Single-Region **Cloud KMS CMEK**, **Application Default Credentials (ADC)**, and cryptographically signed webhooks for write mutations.
 
 ---
 
@@ -25,7 +25,7 @@ Cross-system discrepancies between **ServiceNow** (ITSM/tickets), **Salesforce**
 ```mermaid
 graph LR
     subgraph Ingress ["1. Ingress & A2UI"]
-        GeminiUI["Gemini Enterprise<br/><b>Custom A2UI Catalog</b>"]
+        GeminiUI["Gemini Enterprise Chat<br/><b>Custom A2UI v0.9 Catalog</b>"]
         PubSub["Cloud Pub/Sub<br/>(Recon Events)"]
     end
 
@@ -33,15 +33,14 @@ graph LR
         Coordinator["Go Coordinator Agent"]
         Router["Strategic Router<br/>(Flash 3.7 vs Pro 3.1)"]
         DLP["In-Flight Cloud DLP"]
-        SNWorker["ServiceNow Worker"]
-        SFWorker["Salesforce Worker"]
-        SAPWorker["SAP MockReconciler"]
+        SFWorker["Salesforce Worker<br/>(Revenue & Contracts)"]
+        SNWorker["ServiceNow Worker<br/>(Incidents & Disputes)"]
+        A2UIBuilder["Parameterized A2UI Builder<br/>(Zero Validation Errors)"]
     end
 
     subgraph EnterpriseData ["3. Systems of Record"]
-        SN["ServiceNow (3P)"]
-        SF["Salesforce (3P)"]
-        SAP["SAP OData v4 (Mock)"]
+        SF["Salesforce Dev Org<br/>(Live Opportunities)"]
+        SN["ServiceNow PDI<br/>(Live Incidents)"]
     end
 
     subgraph Safety ["4. State & HITL"]
@@ -53,18 +52,47 @@ graph LR
     GeminiUI <--> Coordinator
     Coordinator --> DLP
     Coordinator --> Router
-    Coordinator --> SNWorker --> SN
     Coordinator --> SFWorker --> SF
-    Coordinator --> SAPWorker --> SAP
+    Coordinator --> SNWorker --> SN
+    Coordinator --> A2UIBuilder --> GeminiUI
     Coordinator --> Firestore
     Coordinator --> HITLGate
 ```
 
 ---
 
+## ⚡ Quickstart & Makefile Automation
+
+The root [`Makefile`](Makefile) provides simple commands for the entire lifecycle:
+
+```bash
+# 1. Inspect or configure sandbox credentials (Salesforce & ServiceNow)
+make setup-env
+
+# 2. Generate 500 correlated enterprise records (4 variance archetypes)
+make synth COUNT=500
+
+# 3. Simulate or load records into live Salesforce and ServiceNow sandboxes
+make seed-dry-run            # Simulation mode (no API calls)
+make seed-sample LIMIT=5     # Seed a 5-record test batch
+make seed                    # Seed all 500 records (interactive prompts if keys missing)
+
+# 4. Programmatically verify live records in both platforms
+make verify
+
+# 5. Run the Go Reconciliation Agent & stream A2UI v0.9 cards
+make run-agent CONTRACT=CTR-2026-001
+
+# 6. Run test suites and compile binaries
+make test                    # Run package tests
+make build                   # Compile bin/synth, bin/loader, bin/verifier, bin/agent
+```
+
+---
+
 ## 📚 Complete Project Documentation
 
-All architectural design documents, runbooks, specifications, and papers are available in the [`docs/`](docs/) directory:
+All architectural design documents, runbooks, specifications, and scorecards are available in the [`docs/`](docs/) directory:
 
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
 - 🎯 **[Critical User Journeys (CUJs) & Scenario Catalog](docs/critical_user_journeys.md)** — 5 real enterprise scenarios for *Apex Global Cloud Services*, personas, natural language prompts, and A2UI results.
@@ -77,42 +105,11 @@ All architectural design documents, runbooks, specifications, and papers are ava
 - 🛠️ **[ADK & MCP Tools Reference Manual](docs/tools_reference.md)** — Comprehensive catalog of Pub/Sub, connector, DLP, and HITL tool schemas.
 - ⚙️ **[Operations & Day-2 Support Runbook](docs/operations_runbook.md)** — SRE guide for DLQ triage, secret rotation, and connector incident handling.
 - 🧪 **[Evaluation & Golden Benchmark Guide](docs/evaluation_benchmark.md)** — 500-sample synthetic dataset, 4 variance archetypes, and LLM-as-a-judge scoring.
-- 🚀 **[Complete Redeployment Runbook](docs/deployment_guide.md)** — Step-by-step Terraform deployment and GCP configuration guide.
+- 🚀 **[Complete Deployment Runbook](docs/deployment_guide.md)** — Step-by-step Terraform deployment and GCP configuration guide.
 - 💯 **[95/95 AgentOps Code Review Matrix](docs/code_review_matrix.md)** — Exhaustive compliance scorecard showing code evidence across all 19 review criteria.
 - 📋 **[23-Task Technical Backlog](docs/backlog_task_breakdown.md)** — Master task status matrix and delivery phases.
 - ⚖️ **[Architecture Decision Records (ADRs)](docs/adr/)** — Formal ADR registry (ADR-0001 through ADR-0009).
 - 📰 **[Technical Blog Post](docs/blog_post.md)** — 5 Days of AI Agents engineering journey and custom A2UI showcase.
-
----
-
-## ⚡ Quickstart
-
-### 1. Generate Synthetic Data & Seed Live Environments
-```bash
-# Generate 500 correlated enterprise transaction records
-go run tools/synth/main.go --count=500 --output=data/correlated_recon_500.json
-
-# Seed live Salesforce Developer Org
-go run tools/loader/main.go --target=salesforce --input=data/correlated_recon_500.json
-
-# Seed live ServiceNow Developer Instance
-go run tools/loader/main.go --target=servicenow --input=data/correlated_recon_500.json
-
-# Programmatically validate seeded records across live APIs
-go run tools/verifier/main.go --input=data/correlated_recon_500.json
-```
-
-### 2. Run Automated Regression & CUJ Benchmark Suite
-```bash
-go test -v -race ./tests/...
-```
-
-### 3. Deploy Infrastructure via Terraform
-```bash
-cd terraform
-terraform init
-terraform apply
-```
 
 ---
 
