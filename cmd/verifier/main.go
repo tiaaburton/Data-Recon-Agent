@@ -1,49 +1,24 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/envutil"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/schemas"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/verifier"
 )
-
-func loadEnvFile(path string) {
-	file, err := os.Open(path)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			k := strings.TrimSpace(parts[0])
-			v := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
-			if os.Getenv(k) == "" {
-				os.Setenv(k, v)
-			}
-		}
-	}
-}
 
 func main() {
 	inputPath := flag.String("input", "data/correlated_recon_500.json", "Path to synthetic dataset")
 	flag.Parse()
 
-	loadEnvFile(".env.local")
-	loadEnvFile(".env")
+	envutil.LoadEnvFile(".env")
+	envutil.LoadEnvFile(".env.local")
 
 	data, err := os.ReadFile(*inputPath)
 	if err != nil {

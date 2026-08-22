@@ -147,13 +147,19 @@ lint: ## Run go vet and static code checks
 # 6. Build & Execution
 # ------------------------------------------------------------------------------
 
+.PHONY: run-agent
+run-agent: ## Execute the Data Reconciliation Agent and stream A2UI v0.9 cards (Usage: make run-agent CONTRACT=CTR-2026-001)
+	@echo -e "$(CYAN)--> Running Data Reconciliation Agent for Contract $(CONTRACT)...$(RESET)"
+	@go run cmd/agent/main.go --contract=$(CONTRACT)
+
 .PHONY: build
-build: ## Compile all standalone CLI binaries (cmd/synth, cmd/loader, cmd/verifier)
+build: ## Compile all standalone CLI binaries (cmd/synth, cmd/loader, cmd/verifier, cmd/agent)
 	@echo -e "$(CYAN)--> Compiling CLI binaries to bin/...$(RESET)"
 	@mkdir -p bin
 	@go build -o bin/synth cmd/synth/main.go
 	@go build -o bin/loader cmd/loader/main.go
 	@go build -o bin/verifier cmd/verifier/main.go
+	@go build -o bin/agent cmd/agent/main.go
 	@echo -e "$(GREEN)Binaries built in bin/$(RESET)"
 
 .PHONY: clean
