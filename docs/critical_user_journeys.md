@@ -11,12 +11,12 @@ To demonstrate real-world applicability, the agent is configured for **Apex Glob
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                     APEX GLOBAL CLOUD SERVICES DATA LANDSCAPE                   │
-├──────────────────────┬──────────────────────────┬───────────────────────────────┤
-│ SAP S/4HANA (ERP)    │ Salesforce CRM (Sales)   │ ServiceNow ITSM (Operations) │
-│ • Billing Documents  │ • Closed-Won Deals       │ • Billing Disputes & Credits  │
-│ • Metered Invoices   │ • Contract Caps & Terms  │ • IT Outage SLA Penalties     │
-│ • GL Journal Entries │ • Customer Accounts      │ • Provisioning Adjustments    │
-└──────────────────────┴──────────────────────────┴───────────────────────────────┘
+├─────────────────────────────────────────┬───────────────────────────────────────┤
+│ Salesforce CRM & Revenue Cloud (Sales)  │ ServiceNow ITSM & CS (Operations)     │
+│ • Closed-Won Opportunities & Contracts  │ • Customer Billing Disputes & Tickets │
+│ • Contract Billing Caps & Line Items    │ • IT Outage Incident Records (RCAs)   │
+│ • Customer Accounts & Entitlements      │ • SLA Breach Credits & Adjustments    │
+└─────────────────────────────────────────┴───────────────────────────────────────┘
 ```
 
 ---
@@ -31,10 +31,10 @@ graph LR
     P4["🛡️ David Chen<br/><b>IT Operations & SRE Lead</b>"]
 ```
 
-1. **Sarah Lin (Revenue Accounting Lead)**: Responsible for monthly revenue close, reconciling billed SAP invoices against CRM sales agreements, and verifying dispute credit authorizations.
+1. **Sarah Lin (Revenue Accounting Lead)**: Responsible for monthly revenue close, reconciling Salesforce CRM billing line items against ServiceNow dispute tickets and customer credits.
 2. **Marcus Vance (Enterprise Account Executive)**: Manages Fortune 500 accounts; investigates customer invoice disputes before quarterly business reviews.
 3. **Priya Patel (Cloud FinOps Analyst)**: Monitors metered consumption, rate-tier discounts, and contract billing cap compliance.
-4. **David Chen (IT Operations & SRE Lead)**: Validates SLA breach credit memos filed in ServiceNow before finance issues invoice adjustments.
+4. **David Chen (IT Operations & SRE Lead)**: Validates SLA breach credit memos filed in ServiceNow before finance issues billing adjustments in Salesforce.
 
 ---
 
@@ -46,7 +46,7 @@ graph TD
     CUJ2["CUJ-02: Invoicing Timing Lag Grace Period<br/>(Globex Logistics - 4-Day Billing Window)"]
     CUJ3["CUJ-03: Multi-Currency FX & Regional Tax Rounding<br/>(Initech Healthcare - EUR/USD €4.85 Rounding)"]
     CUJ4["CUJ-04: Outage SLA Penalty Credit Memo Injection<br/>(Cyberdyne Systems - 99.0% Breach Penalty)"]
-    CUJ5["CUJ-05: Multi-Account Batch Portfolio Audit<br/>(Q3 Enterprise Enterprise Sweep)"]
+    CUJ5["CUJ-05: Multi-Account Batch Portfolio Audit<br/>(Q3 Enterprise Sweep)"]
 ```
 
 ---
@@ -54,27 +54,26 @@ graph TD
 ### 3.1. CUJ-01: Critical Financial Discrepancy & Resolved Dispute (Acme Corp)
 
 - **Persona**: Sarah Lin (Revenue Accounting Lead)
-- **Business Problem**: Acme Corp was billed **$145,000.00** in SAP, but their Salesforce contract capped Q3 spend at **$130,750.00**. A dispute was filed in ServiceNow.
+- **Business Problem**: Acme Corp was billed **$145,000.00** in Salesforce Revenue Cloud, but their Salesforce contract capped Q3 spend at **$130,750.00**. A dispute was resolved in ServiceNow for the $14,250 overage.
 
 #### User Queries (Natural Language):
-> *"Reconcile Q3 cloud invoices for Acme Corp (Contract #CTR-2026-001)"*  
-> *"Why does SAP Invoice #INV-2026-9081 differ from Salesforce Opportunity #OPP-8821 for Acme?"*  
+> *"Reconcile Q3 cloud billing for Acme Corp (Contract #CTR-2026-001)"*  
+> *"Why does Salesforce Billing line item differ from ServiceNow Incident #INC0010042 for Acme?"*  
 > *"Check if there is an active ServiceNow dispute for Acme's $14,250 overage."*
 
 #### Multi-Agent Execution Flow:
 1. **Coordinator Agent** (Gemini 3.7 Flash Preview):
    - Normalizes input $\to$ extracts `Contract: CTR-2026-001`, `Account: Acme Corp`.
-   - Spawns concurrent Goroutines for `SalesforceWorker`, `ServiceNowWorker`, `SAPWorker`.
+   - Spawns concurrent Goroutines for `SalesforceWorker` and `ServiceNowWorker`.
 2. **Sub-Agent Execution**:
-   - `SalesforceWorker`: Executes SOQL `SELECT Id, Name, Amount, StageName FROM Opportunity WHERE Name LIKE '%CTR-2026-001%'` $\to$ Returns `$130,750.00` (Closed Won).
-   - `SAPWorker`: Queries OData `/BillingDocument('INV-2026-9081')` $\to$ Returns `$145,000.00` (POSTED).
+   - `SalesforceWorker`: Executes SOQL queries for contract line items and billed amounts $\to$ Returns Billed `$145,000.00` vs Cap `$130,750.00`.
    - `ServiceNowWorker`: Queries `/api/now/table/incident?correlation_id=corr-uuid-771` $\to$ Returns `INC0010042` (Resolved: "Credit Memo approved for $14,250 overage").
 3. **Strategic Router** (Routes to Gemini 3.1 Pro):
    - Calculates Net Variance: $\$145,000 - \$130,750 = +\$14,250$.
    - Cross-references ServiceNow Incident `INC0010042` which accounts for 100% of the variance.
    - Synthesizes A2UI v0.9 Declarative Component Tree.
 4. **HITL Intercept**:
-   - Constructs HMAC-SHA256 `SignedApprovalToken` for applying a `$14,250.00` Credit Memo in SAP S/4HANA.
+   - Constructs HMAC-SHA256 `SignedApprovalToken` for applying a `$14,250.00` billing adjustment in Salesforce.
 
 #### Expected A2UI Visual Outcome:
 ```
@@ -82,17 +81,17 @@ graph TD
 │ [★ EXPLOSIVE VARIANCE BADGE] CRITICAL DISCREPANCY: -$14,250.00               │
 │ Customer: Acme Global Technologies │ Contract: CTR-2026-001                  │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ 3-WAY RECONCILIATION MATRIX:                                                 │
-│ • SAP S/4HANA (Invoice #INV-2026-9081):   $145,000.00 [POSTED]               │
-│ • Salesforce CRM (Opportunity #OPP-8821): $130,750.00 [CLOSED WON] ⚠️        │
+│ 2-WAY RECONCILIATION MATRIX:                                                 │
+│ • Salesforce Revenue (Billed Amount):     $145,000.00 [POSTED] ⚠️             │
+│ • Salesforce Contract (Agreed Cap):       $130,750.00 [CLOSED WON]           │
 │ • ServiceNow ITSM (Incident #INC0010042):  $14,250.00 [RESOLVED CREDIT]     │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ ROOT CAUSE ANALYSIS:                                                         │
 │ Unmetered compute overage was disputed by customer and approved in           │
-│ ServiceNow INC0010042, but credit adjustment has not been posted to SAP.     │
+│ ServiceNow INC0010042, but credit adjustment has not been posted to SFDC.   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ 🛡️ HITL ACTION REQUIRED:                                                     │
-│ [  APPROVE SAP CREDIT MEMO (+$14,250)  ]      [  REJECT / ESCALATE  ]        │
+│ [  APPROVE BILLING CREDIT ADJUSTMENT (+$14,250)  ]   [  REJECT / ESCALATE  ] │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -101,15 +100,15 @@ graph TD
 ### 3.2. CUJ-02: Invoicing Timing Lag Grace Period (Globex Logistics)
 
 - **Persona**: Marcus Vance (Enterprise Account Executive)
-- **Business Problem**: Deal was marked `Closed Won` on July 31 in Salesforce, but SAP billing generated the document on August 4. Marcus needs to verify if the account is in good standing before a QBR.
+- **Business Problem**: Deal was marked `Closed Won` on July 31 in Salesforce, but ServiceNow provisioning completed on August 4. Marcus needs to verify if the account is in good standing before a QBR.
 
 #### User Queries:
 > *"Is Globex Logistics (Contract #CTR-2026-002) fully reconciled for July?"*  
-> *"Check the billing status for Globex Opportunity #OPP-8822."*
+> *"Check the billing and provisioning status for Globex Opportunity #OPP-8822."*
 
 #### Agent Execution Flow:
 1. `SalesforceWorker` finds CloseDate = `2026-07-31` for `$85,000.00`.
-2. `SAPWorker` finds Invoice PostingDate = `2026-08-04` for `$85,000.00`.
+2. `ServiceNowWorker` finds Provisioning Completion Date = `2026-08-04` for `$85,000.00`.
 3. `Coordinator` detects 4-day date delta. Compares against **SLA Grace Period Policy** ($\le 5\text{ days}$).
 4. Marks status as `TIMING_LAG_VERIFIED`.
 
@@ -127,11 +126,11 @@ graph TD
 
 #### User Queries:
 > *"Audit currency conversion and tax rounding for Initech Healthcare (#CTR-2026-003)."*  
-> *"Why is there a $4.85 difference on Initech Invoice #INV-2026-9083?"*
+> *"Why is there a $4.85 difference on Initech Billing Record #BIL-2026-9083?"*
 
 #### Agent Execution Flow:
-1. `SalesforceWorker` returns Contract Amount = `€50,000.00` (EUR).
-2. `SAPWorker` returns Gross USD = `$54,254.85` (Exchange Rate: 1.0850 + 8.25% VAT).
+1. `SalesforceWorker` returns Contract Amount = `€50,000.00` (EUR) and Billed Amount = `$54,254.85` (Exchange Rate: 1.0850 + 8.25% VAT).
+2. `ServiceNowWorker` confirms no outstanding dispute tickets for Initech.
 3. `Coordinator` applies rounding tolerance policy ($\le \$5.00$).
 4. Confirms mathematical integrity and tags with `TAX_FX_ROUNDING_MATCH`.
 
@@ -144,13 +143,12 @@ graph TD
 
 #### User Queries:
 > *"Process SLA outage penalty reconciliation for Cyberdyne Systems (#CTR-2026-004)."*  
-> *"Verify ServiceNow SLA breach incident INC0010088 and adjust SAP invoice."*
+> *"Verify ServiceNow SLA breach incident INC0010088 and adjust Salesforce billing."*
 
 #### Agent Execution Flow:
 1. `ServiceNowWorker` verifies outage duration ($240\text{ mins}$) and penalty formula ($10\%$ of monthly recurring charge).
-2. `SalesforceWorker` confirms Monthly Contract Base = `$92,000.00`.
-3. `SAPWorker` verifies original invoice was posted for `$92,000.00`.
-4. `Coordinator` generates A2UI Signed Mutation Card to apply a `$9,200.00` SLA Penalty Credit Memo in SAP.
+2. `SalesforceWorker` confirms Monthly Contract Base = `$92,000.00` and original invoice amount `$92,000.00`.
+3. `Coordinator` generates A2UI Signed Mutation Card to apply a `$9,200.00` SLA Penalty Credit Memo in Salesforce Revenue Cloud.
 
 ---
 

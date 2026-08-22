@@ -13,10 +13,10 @@ sequenceDiagram
     participant Gemini as Gemini Enterprise Chat / Web Workspace
     participant AgentEngine as Vertex AI Agent Engine / Extension Gate
     participant GoCoordinator as Go Coordinator Agent (Cloud Run)
-    participant WorkerMesh as Worker Sub-Agents (SN / SF / SAP)
+    participant WorkerMesh as Worker Sub-Agents (SN / SF)
     participant Systems as ServiceNow & Salesforce Live APIs
 
-    User->>Gemini: "Reconcile Q3 cloud invoices for Acme Corp (Contract #CTR-2026-001)"
+    User->>Gemini: "Reconcile Q3 cloud billing for Acme Corp (Contract #CTR-2026-001)"
     Gemini->>AgentEngine: Resolve Extension Action (OpenAPI Manifest)
     AgentEngine->>GoCoordinator: POST /api/v1/recon/trigger (Bearer OIDC Token)
     GoCoordinator->>WorkerMesh: Spawn parallel Goroutines (A2A Consensus)
@@ -25,7 +25,7 @@ sequenceDiagram
     WorkerMesh-->>GoCoordinator: Aggregate Findings & Discrepancies
     GoCoordinator->>GoCoordinator: Synthesize A2UI v0.9 Declarative Payload
     GoCoordinator-->>AgentEngine: Stream Server-Sent Events (SSE) + A2UI Payload
-    AgentEngine-->>Gemini: Render Native Custom A2UI Card (Explosive Badge + 3-Way Diff)
+    AgentEngine-->>Gemini: Render Native Custom A2UI Card (Explosive Badge + 2-Way Diff)
     Gemini-->>User: Interactive Visual Reconciliation Card with Action Buttons
 ```
 
@@ -39,7 +39,7 @@ To register the Data Reconciliation Agent as a native extension in Gemini Enterp
 {
   "name": "enterprise_data_reconciliation_agent",
   "display_name": "Autonomous Data Reconciliation Agent",
-  "description": "Cross-system financial and billing reconciliation agent across SAP S/4HANA, Salesforce CRM, and ServiceNow ITSM.",
+  "description": "Cross-system financial and billing reconciliation agent across Salesforce CRM and ServiceNow ITSM.",
   "version": "1.0.0",
   "auth": {
     "type": "OIDC_ID_TOKEN",
@@ -78,7 +78,7 @@ paths:
   /api/v1/recon/trigger:
     post:
       summary: Trigger Cross-System Reconciliation
-      description: Initiates parallel multi-agent data reconciliation across Salesforce, ServiceNow, and SAP S/4HANA.
+      description: Initiates parallel multi-agent data reconciliation across Salesforce Revenue Cloud and ServiceNow ITSM.
       operationId: triggerReconciliation
       requestBody:
         required: true
@@ -96,9 +96,9 @@ paths:
                 contract_id:
                   type: string
                   example: "CTR-2026-001"
-                invoice_number:
+                billing_record_id:
                   type: string
-                  example: "INV-2026-9081"
+                  example: "BIL-2026-9081"
                 tolerance_usd:
                   type: number
                   default: 5.00
@@ -174,9 +174,6 @@ data: {"step": "QUERY_SALESFORCE", "detail": "Retrieved Closed-Won Opportunity #
 event: agent_thought
 data: {"step": "QUERY_SERVICENOW", "detail": "Retrieved Dispute Incident #INC-4412 (Billing Overage $14,250.00)"}
 
-event: agent_thought
-data: {"step": "QUERY_SAP", "detail": "Retrieved Invoice #INV-2026-9081 ($145,000.00)"}
-
 event: a2ui_render
 data: {
   "version": "v0.9",
@@ -191,16 +188,17 @@ data: {
         "pulse_animation": true
       },
       "diff_matrix": {
-        "type": "custom:ThreeWayDiffTable",
-        "columns": ["Field", "SAP S/4HANA", "Salesforce CRM", "ServiceNow ITSM"],
+        "type": "custom:MultiSystemDiffTable",
+        "columns": ["Field", "Salesforce CRM", "ServiceNow ITSM"],
         "rows": [
-          {"field": "Gross Amount", "sap": "$145,000.00", "sfdc": "$130,750.00 ⚠️", "sn": "$145,000.00"},
-          {"field": "Dispute Status", "sap": "POSTED", "sfdc": "N/A", "sn": "RESOLVED (#INC-4412)"}
+          {"field": "Gross Billed Amount", "sfdc": "$145,000.00 ⚠️", "sn": "$145,000.00"},
+          {"field": "Agreed Contract Cap", "sfdc": "$130,750.00", "sn": "N/A"},
+          {"field": "Dispute Credit Status", "sfdc": "PENDING_CREDIT", "sn": "RESOLVED (#INC-4412)"}
         ]
       },
       "hitl_action": {
         "type": "custom:SignedMutationCard",
-        "action_name": "Adjust SAP Invoice & SFDC Line Item",
+        "action_name": "Apply Salesforce Billing Adjustment",
         "approval_token": "eyJhbGciOiJFZERTQSI...",
         "webhook_url": "/api/v1/hitl/execute"
       }

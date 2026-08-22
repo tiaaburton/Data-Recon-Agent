@@ -12,15 +12,15 @@
 ## 1. Executive Summary & Problem Statement
 
 ### 1.1. Business Context
-Modern enterprise operations rely on multiple heterogeneous enterprise systems of record—primarily **ServiceNow** for IT service management and incident ticketing, **Salesforce** for customer relationship management and commercial contracts, and **SAP ERP (OData)** for financial billing and general ledger accounting. In real-world enterprise operations, discrepancies routinely arise between these systems:
-- A customer is billed in SAP for services not recorded or delivered in Salesforce.
+Modern enterprise operations rely on multiple heterogeneous enterprise systems of record—primarily **ServiceNow** for IT service management and incident ticketing, and **Salesforce** for customer relationship management, commercial contracts, and revenue billing. In real-world enterprise operations, discrepancies routinely arise between these systems:
+- A customer is billed in Salesforce Revenue Cloud for services with outstanding dispute tickets in ServiceNow.
 - A critical SLA ticket is resolved in ServiceNow without corresponding invoice reconciliation or service credits in Salesforce.
-- Line items, contract IDs, currency rates, and cost centers drift due to human data-entry errors or desynchronized asynchronous batch jobs.
+- Line items, contract IDs, currency rates, and billing schedules drift due to human data-entry errors or desynchronized asynchronous batch jobs.
 
-Historically, reconciling these discrepancies requires manual human swivel-chair investigation across three complex portals, averaging 45–90 minutes per contested record.
+Historically, reconciling these discrepancies requires manual human swivel-chair investigation across complex portals, averaging 45–90 minutes per contested record.
 
 ### 1.2. The Solution: Autonomous Data Reconciliation Agent
-The **Data Reconciliation Agent** is an autonomous, high-throughput, multi-agent AI system built in **Go (ADK 2.0)** running on **Vertex AI Agent Engine** and **Cloud Run (BYO-MCP)**. It proactively ingests discrepancy events via **Cloud Pub/Sub**, orchestrates specialized sub-agents across ServiceNow, Salesforce, and SAP, verifies data integrity against enterprise schemas, scrubs PII in-flight via **Cloud DLP (Sensitive Data Protection)**, and presents rich, interactive resolution cards using a **custom A2UI catalog** inside the Gemini Enterprise workspace. High-stakes financial and customer-impacting mutations are strictly gated by **Human-in-the-Loop (HITL) cryptographic webhook signatures**.
+The **Data Reconciliation Agent** is an autonomous, high-throughput, multi-agent AI system built in **Go (ADK 2.0)** running on **Vertex AI Agent Engine** and **Cloud Run (BYO-MCP)**. It proactively ingests discrepancy events via **Cloud Pub/Sub**, orchestrates specialized sub-agents across ServiceNow and Salesforce, verifies data integrity against enterprise schemas, scrubs PII in-flight via **Cloud DLP (Sensitive Data Protection)**, and presents rich, interactive resolution cards using a **custom A2UI catalog** inside the Gemini Enterprise workspace. High-stakes financial and customer-impacting mutations are strictly gated by **Human-in-the-Loop (HITL) cryptographic webhook signatures**.
 
 ### 1.3. Quantified Non-Functional Requirements (NFRs)
 | Metric | Target SLA / Specification | Justification |
@@ -63,7 +63,6 @@ graph TB
             Coordinator["Multi-Agent Coordinator<br/>(Go 1.22 Runtime)"]
             SNSubAgent["ServiceNow Sub-Agent"]
             SFSubAgent["Salesforce Sub-Agent"]
-            SAPReconciler["SAP MockReconciler / OData"]
             AsyncMem["Async Memory Writer<br/>(Goroutine / Channel Engine)"]
             HITLGate["HITL Intercept & Webhook Validator"]
         end
@@ -99,7 +98,6 @@ graph TB
     Coordinator <--> A2AProtocol
     Coordinator --> SNSubAgent
     Coordinator --> SFSubAgent
-    Coordinator --> SAPReconciler
 
     %% Messaging Flow
     PubSubTopic --> PubSubTool --> Coordinator
@@ -123,7 +121,7 @@ graph TB
 ## 3. Core Architectural Subsystems
 
 ### 3.1. Go ADK 2.0 Runtime & Coordinator-Worker Multi-Agent Orchestration
-Rather than executing a monolithic LLM prompt that attempts to reason across ServiceNow, Salesforce, and SAP simultaneously (which leads to severe context pollution, hallucinated tool calls, and high token costs), the system uses a **Coordinator-Worker Multi-Agent Pattern**:
+Rather than executing a monolithic LLM prompt that attempts to reason across ServiceNow and Salesforce simultaneously (which leads to context pollution, hallucinated tool calls, and high token costs), the system uses a **Coordinator-Worker Multi-Agent Pattern**:
 
 1. **Coordinator Agent (`recon-coordinator`)**:
    - Analyzes incoming discrepancy events or user prompts.
@@ -137,11 +135,8 @@ Rather than executing a monolithic LLM prompt that attempts to reason across Ser
    - Validates SLA breach status, service incident timestamps, and affected CIs.
 
 3. **Salesforce Worker Agent (`sf-worker`)**:
-   - Equipped with Salesforce CRM tool schemas (`get_contract_line_items`, `get_billing_schedules`, `query_account_contracts`).
-   - Handles account balance lookups and payment terms.
-
-4. **SAP Worker / MockReconciler (`sap-worker`)**:
-   - Implements the Go `MockReconciler` interface simulating enterprise SAP S/4HANA OData v4 endpoints (`/sap/opu/odata4/BillingDocument`, `/sap/opu/odata4/JournalEntry`).
+   - Equipped with Salesforce CRM tool schemas (`get_contract_line_items`, `get_billing_schedules`, `stage_billing_adjustment`).
+   - Handles account balance lookups, contract terms, and revenue adjustment staging.
 
 ```mermaid
 sequenceDiagram
@@ -150,7 +145,7 @@ sequenceDiagram
     participant Coord as Coordinator Agent (Go)
     participant Router as Strategic Model Router
     participant DLP as Cloud DLP Middleware
-    participant Workers as Worker Agents (SN / SF / SAP)
+    participant Workers as Worker Agents (SN / SF)
     participant HITL as HITL Webhook Gate
     participant UI as Gemini Enterprise (A2UI)
 
@@ -163,7 +158,6 @@ sequenceDiagram
     par Concurrent Worker Execution
         Coord->>Workers: Fetch ServiceNow Incident (INC-88219)
         Coord->>Workers: Fetch Salesforce Contract (CTR-4401)
-        Coord->>Workers: Fetch SAP Billing Doc (INV-99042)
     end
     Workers-->>Coord: Return Typed System Snapshots
     
@@ -233,71 +227,10 @@ The Data Reconciliation Agent utilizes the **A2UI v0.9 Declarative Protocol** wi
 | Custom A2UI Component | Function | Visual Style & Figma Design Tokens |
 | :--- | :--- | :--- |
 | **`DiscrepancyAlertBadge`** | Highlights critical billing/SLA variances. | **Custom Explosive Badge** (`#EA4335` pulsing aura, `#FCE8E6` container, `figma:badge-explosive-v2`). |
-| **`MultiSystemDiffTable`** | Compares ServiceNow vs Salesforce vs SAP side-by-side. | Three-column responsive grid with color-coded mismatch cells (`#FEF7E0` warning yellow, `#D93025` error red). |
+| **`MultiSystemDiffTable`** | Compares ServiceNow vs Salesforce side-by-side. | Two-column responsive grid with color-coded mismatch cells (`#FEF7E0` warning yellow, `#D93025` error red). |
 | **`FieldMatcherSelector`** | Allows human reviewer to select winning field value. | Interactive radio card group with automated suggested resolution pill. |
 | **`SignedMutationCard`** | Displays cryptographic signature and audit trail for HITL approval. | Security lock icon, cryptographic SHA-256 hash stamp, verified authorizer chip (`#188038`). |
 | **`ReconProgressStepper`** | Visualizes live progress across multi-agent steps. | Horizontal animated stepper (`Pending` $\to$ `Ingested` $\to$ `Cross-Checked` $\to$ `Mutated`). |
-
----
-
-## 5. Security, Privacy & Governance Architecture
-
-### 5.1. In-Flight PII Redaction with Cloud DLP
-All prompts, tool payloads, and logged outputs pass through a Go middleware integrating the **Google Cloud Sensitive Data Protection (DLP) API**:
-- **Scanned InfoTypes**: `EMAIL_ADDRESS`, `US_SOCIAL_SECURITY_NUMBER`, `CREDIT_CARD_NUMBER`, `PHONE_NUMBER`, `IBAN_CODE`, `PERSON_NAME`.
-- **Redaction Strategy**: In-memory token replacement with irreversible cryptographic masking (e.g., `[REDACTED_SSN_#9a2b]`) before writing to Firestore or emitting to Cloud Logging.
-
-### 3.6. Gemini Enterprise Native Integration & A2UI Streaming Protocol
-Gemini Enterprise (Gemini for Google Workspace & Gemini Enterprise Chat) acts as the primary conversational interface for business operators:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Business Operator
-    participant Gemini as Gemini Enterprise Chat
-    participant CloudRun as Go ADK 2.0 Cloud Run (BYO-MCP)
-    participant Mesh as Sub-Agent Mesh (SN/SF/SAP)
-
-    User->>Gemini: "Reconcile contract CTR-2026-001 with SAP invoice"
-    Gemini->>CloudRun: POST /api/v1/recon/trigger (OpenAPI Manifest + OIDC)
-    CloudRun->>Mesh: Parallel Goroutine Execution
-    Mesh-->>CloudRun: Real-time Live API Results
-    CloudRun-->>Gemini: SSE Stream: agent_thought + A2UI v0.9 Declarative Tree
-    Gemini-->>User: Renders Custom Explosive Badge & Interactive Diff Matrix
-```
-
-1. **OpenAPI 3.0 Manifest**: Exposes `/api/v1/recon/trigger` with strict JSON schema definitions for automated tool selection in Vertex AI Agent Engine.
-2. **Streaming Protocol**: Emits Server-Sent Events (SSE) providing real-time thought transparency (`event: agent_thought`) followed by declarative UI payloads (`event: a2ui_render`).
-3. **IAM Authentication**: Google-managed OIDC ID tokens validated via `google.golang.org/api/idtoken`.
-
-### 3.7. Synthetic Data Generation & Live Multi-System Seeding
-To provide genuine end-to-end reconciliation against live environments rather than static mocks, the system includes a dedicated data seeding engine (`cmd/synth` and `cmd/loader`):
-
-```mermaid
-graph LR
-    Synth["cmd/synth/main.go<br/><b>Correlated Data Generator</b>"] --> Golden["data/correlated_recon_500.json"]
-    Golden --> Loader["cmd/loader/main.go<br/><b>Multi-System Seeder</b>"]
-    Loader -->|Table API / OAuth| SN["ServiceNow Dev Sandbox<br/>(Live Incidents)"]
-    Loader -->|Composite REST API| SF["Salesforce Dev Org<br/>(Live Opportunities)"]
-    Loader -->|OData v4 Entity Injection| SAP["SAP S/4HANA OData<br/>(Invoices)"]
-```
-
-- **Correlated Relational Graph**: Generates 500 enterprise records sharing unified keys (`contract_id`, `correlation_id`, `account_id`) with precisely calibrated mathematical variances.
-- **Salesforce Seeder**: Direct REST composite upserts of accounts, contracts, and closed-won opportunities with custom discrepancy fields.
-- **ServiceNow Seeder**: Table API batch insertion of billing dispute incidents with root-cause categorization.
-
----
-
-## 4. Handcrafted Pub/Sub Toolset Architecture
-
-### 4.1. The `google.adk.tools.pubsub` Toolset
-To guarantee reliable event-driven reconciliation, the agent integrates with the handcrafted `google.adk.tools.pubsub` module:
-- **`PubSubCredentialsConfig`**: Manages service account credentials and Google auth contexts.
-- **`PubSubToolConfig`**: Configures project IDs, topics, subscriptions, dead-letter topics, and pull thresholds.
-- **`PubSubToolset`**: Provides three core primitives:
-  1. `pull_messages`: Non-blocking batch retrieval with explicit base64 payload decoding.
-  2. `ack_messages`: Granular acknowledgment ensuring at-least-once delivery semantics.
-  3. `publish_message`: Emits discrepancy outcomes and routes poison messages to DLQ.
 
 ---
 
@@ -309,7 +242,7 @@ To guarantee reliable event-driven reconciliation, the agent integrates with the
 - Redaction technique: Cryptographic bucketing and token replacement (e.g., `[SSN_REDACTED_1]`).
 
 ### 5.2. Cloud KMS & Secret Manager Integration
-- **Secret Manager**: Securely injects OAuth credentials, ServiceNow instance tokens, Salesforce connected app certificates, and SAP client secrets at container startup. Zero hardcoded secrets.
+- **Secret Manager**: Securely injects OAuth credentials, ServiceNow instance tokens, and Salesforce connected app certificates at container startup. Zero hardcoded secrets.
 - **Cloud KMS**: Single-region Customer-Managed Encryption Keys (CMEK) protect Firestore persistent storage, Cloud Storage golden datasets, and Pub/Sub event payloads.
 
 ### 5.3. Guided Error Handling Architecture
@@ -341,7 +274,7 @@ Every tool call executes inside an Intent vs. Outcome decorator:
 - **Outcome**: Records execution duration, HTTP status code, returned entity IDs, and error recovery prompts.
 
 ### 6.3. OpenTelemetry & Cloud Trace
-- W3C `traceparent` headers are propagated across all sub-agent boundaries, Cloud Run containers, and outbound REST/OData connector calls.
+- W3C `traceparent` headers are propagated across all sub-agent boundaries, Cloud Run containers, and outbound REST connector calls.
 
 ---
 

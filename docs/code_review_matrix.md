@@ -9,17 +9,17 @@ This document provides a comprehensive mapping of the **Data Reconciliation Agen
 | Category | Criteria | Points | Code Evidence & Implementation Location | Compliance Status |
 | :--- | :--- | :---: | :--- | :---: |
 | **1. Tool & Interface Design** | **Comprehensive Tool Docstrings** | 5 | All Go tool functions in `pkg/tools/` include rich, godoc-compliant human-readable descriptions for the LLM explaining tool intent, prerequisites, parameter ranges, and expected return types. | **5 / 5** |
-| | **Descriptive Naming** | 5 | Specific, unambiguous tool names such as `stage_sap_credit_memo`, `query_salesforce_contract_line_items`, and `append_servicenow_work_notes` instead of generic `update_data`. | **5 / 5** |
+| | **Descriptive Naming** | 5 | Specific, unambiguous tool names such as `stage_salesforce_billing_adjustment`, `query_salesforce_contract_line_items`, and `append_servicenow_work_notes` instead of generic `update_data`. | **5 / 5** |
 | | **Explicit JSON Schemas** | 5 | Strict Go structs in `pkg/schemas/` with JSON tags and struct validation tags (`validate:"required,uuid4,oneof=..."`) constraining LLM inputs and outputs. | **5 / 5** |
 | | **Guided Error Handling** | 5 | `pkg/errorhandling/errors.go` defines `GuidedError` returning actionable recovery instructions, alternate discovery tools, and retry payloads back to the LLM upon failure. | **5 / 5** |
 | **2. Context & Memory** | **Robust System Instructions** | 5 | `pkg/agent/system_prompt.go` defines a comprehensive "Constitution" governing persona, cross-system validation rules, security boundaries, and A2UI formatting constraints. | **5 / 5** |
 | | **History Compaction** | 5 | `pkg/compaction/compactor.go` implements token-based sliding window truncation ($N=6$ turns) with background semantic summarization cards and Vertex AI context caching. | **5 / 5** |
 | | **Persistent Session State** | 5 | Cloud Firestore integration in `pkg/memory/async_store.go` storing `/recon_sessions/{session_id}/turns` and audit trails across multi-turn sessions. | **5 / 5** |
 | | **Async Memory Operations** | 5 | Native Go worker pools utilizing buffered channels (`chan MemoryEvent`) and goroutines in `pkg/memory/async_store.go` to persist memories asynchronously without UI latency. | **5 / 5** |
-| **3. Orchestration & Logic** | **Multi-Agent Patterns** | 5 | `pkg/agent/coordinator.go` implements the Coordinator-Worker pattern orchestrating specialized ServiceNow, Salesforce, and SAP sub-agents via the A2A mesh. | **5 / 5** |
+| **3. Orchestration & Logic** | **Multi-Agent Patterns** | 5 | `pkg/agent/coordinator.go` implements the Coordinator-Worker pattern orchestrating specialized ServiceNow and Salesforce sub-agents via the A2A mesh. | **5 / 5** |
 | | **Strategic Model Routing** | 5 | `pkg/agent/router.go` dynamically routes simple lookups to **Gemini 3.7 Flash Preview** and multi-system financial reconciliations to **Gemini 3.1 Pro**. | **5 / 5** |
 | | **Guardrails & Policy Plugins** | 5 | In-line parameter schema validators, financial variance bounds check ($>\$10k$ triggers escalated audit), and deterministic delta engines. | **5 / 5** |
-| | **Human-in-the-Loop Hooks** | 5 | `pkg/hitl/webhook.go` intercepts high-stakes write mutations (SAP Credit Memo / Salesforce contract adjustments) until a valid HMAC-SHA256 / Ed25519 signed webhook is verified. | **5 / 5** |
+| | **Human-in-the-Loop Hooks** | 5 | `pkg/hitl/webhook.go` intercepts high-stakes write mutations (Salesforce billing credit adjustments / ServiceNow status updates) until a valid HMAC-SHA256 / Ed25519 signed webhook is verified. | **5 / 5** |
 | **4. Observability & Tracing** | **Structured JSON Logging** | 5 | Go 1.21+ `log/slog` in `pkg/observability/logger.go` emitting structured GCP Cloud Logging JSON containing `logging.googleapis.com/trace` and span correlation. | **5 / 5** |
 | | **Intent vs. Outcome Capture** | 5 | `pkg/observability/intent_outcome.go` decorator functions recording pre-execution LLM parameters, target rationale, and post-execution results. | **5 / 5** |
 | | **Distributed Tracing** | 5 | OpenTelemetry SDK integration in `pkg/middleware/otel_tracing.go` exporting W3C `traceparent` context to Google Cloud Trace. | **5 / 5** |
@@ -39,7 +39,7 @@ This document provides a comprehensive mapping of the **Data Reconciliation Agen
 - **Guided Error Returns**: When an entity is missing, `NewNotFoundError()` provides the LLM with the exact alternative discovery tool name and search parameter to self-heal without failing the conversation.
 
 ### 2. Context & Memory (20 / 20)
-- **Agent Constitution**: The system prompt in `pkg/agent/system_prompt.go` enforces strict behavioral invariants: "Never execute an ERP write mutation without human confirmation; Always emit A2UI v0.9 compliant declarative JSON; Always check for PII before responding."
+- **Agent Constitution**: The system prompt in `pkg/agent/system_prompt.go` enforces strict behavioral invariants: "Never execute a Salesforce or ServiceNow write mutation without human confirmation; Always emit A2UI v0.9 compliant declarative JSON; Always check for PII before responding."
 - **Context Compaction**: Implements sliding window history compaction with token threshold calculation and asynchronous memory summarization to prevent context window exhaustion.
 
 ### 3. Orchestration & Logic (20 / 20)

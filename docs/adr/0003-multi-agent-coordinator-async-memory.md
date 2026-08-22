@@ -6,7 +6,7 @@
 - **GCP Services Involved**: Cloud Run, Cloud Firestore Native
 
 ## Context & Problem Statement
-A monolithic agent that tries to query and reason across ServiceNow, Salesforce, and SAP simultaneously incurs high hallucination rates and tool invocation errors. Furthermore, saving long-term conversational memory to databases introduces unwanted UI latency.
+A monolithic agent that tries to query and reason across ServiceNow and Salesforce simultaneously incurs high hallucination rates and tool invocation errors. Furthermore, saving long-term conversational memory to databases introduces unwanted UI latency.
 
 ## Decision Drivers
 - Isolated tool context per enterprise system.
@@ -19,7 +19,7 @@ A monolithic agent that tries to query and reason across ServiceNow, Salesforce,
 3. **Option 3**: Synchronous database writes before returning agent responses.
 
 ## Decision Outcome
-**Chosen Option**: **Option 1** because delegating tasks to dedicated sub-agents (`sn-worker`, `sf-worker`, `sap-worker`) reduces tool confusion to $<0.5\%$, and buffered channels decouple memory persistence from user-facing latency.
+**Chosen Option**: **Option 1** because delegating tasks to dedicated sub-agents (`sn-worker`, `sf-worker`) reduces tool confusion to $<0.5\%$, and buffered channels decouple memory persistence from user-facing latency.
 
 ### Positive Consequences
 - Zero UI thread blocking for memory generation.

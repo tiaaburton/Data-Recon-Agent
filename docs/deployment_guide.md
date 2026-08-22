@@ -209,13 +209,13 @@ Register the deployed Cloud Run service as an extension in Gemini Enterprise:
 ```bash
 gcloud beta ai extensions create \
   --display-name="Data Reconciliation Agent" \
-  --description="Autonomous multi-agent reconciliation across SAP, Salesforce, and ServiceNow" \
+  --description="Autonomous multi-agent reconciliation across Salesforce and ServiceNow" \
   --openapi-spec="https://data-recon-server-xxxx-uc.a.run.app/openapi.json" \
   --project="${GCP_PROJECT_ID}" \
   --region="${GCP_REGION}"
 ```
 
-### 6.2. Enable A2UI v0.8 Custom Catalog in Workspace Chat
+### 6.2. Enable A2UI v0.9 Custom Catalog in Workspace Chat
 Ensure your Workspace Chat or Vertex Search and Conversation app points to the custom catalog manifest:
 ```json
 {
@@ -232,7 +232,7 @@ Verify Agent Engine, Live Connectors, and Pub/Sub Event Loop:
 ```bash
 # 1. Publish test discrepancy event to Pub/Sub
 gcloud pubsub topics publish recon-discrepancy-events \
-    --message='{"event_id":"evt-test-01","correlation_id":"corr-uuid-771","account_id":"ACC-88","account_name":"Acme Global","variance_amount":14250.0,"currency":"USD","severity":"CRITICAL","detected_at":"2026-08-16T23:00:00Z","description":"SAP Invoice INV-2026-9081 diverges from Salesforce Opportunity OPP-8821"}'
+    --message='{"event_id":"evt-test-01","correlation_id":"corr-uuid-771","account_id":"ACC-88","account_name":"Acme Global","variance_amount":14250.0,"currency":"USD","severity":"CRITICAL","detected_at":"2026-08-16T23:00:00Z","description":"Salesforce Billed Amount diverges from Contract Cap CTR-2026-001"}'
 
 # 2. Execute end-to-end reconciliation CLI against live Salesforce & ServiceNow
 go run cmd/agent/main.go --contract-id="CTR-2026-001" --mode="LIVE"

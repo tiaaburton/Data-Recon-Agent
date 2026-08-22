@@ -6,7 +6,7 @@
 - **GCP Services Involved**: Cloud Run, Artifact Registry, Vertex AI Agent Engine
 
 ## Context & Problem Statement
-The Data Reconciliation Agent processes high-throughput cross-system events across ServiceNow, Salesforce, and SAP. We evaluated whether to build the agent runtime, tool schemas, and synthetic data generator in Python or Go.
+The Data Reconciliation Agent processes high-throughput cross-system events across ServiceNow and Salesforce. We evaluated whether to build the agent runtime, tool schemas, and synthetic data generator in Python or Go.
 
 ## Decision Drivers
 - High-concurrency event processing ($\ge 2,500$ events/min).

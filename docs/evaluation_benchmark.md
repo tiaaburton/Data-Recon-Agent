@@ -10,7 +10,7 @@ To evaluate multi-system reconciliation accuracy without compromising production
 
 ```mermaid
 pie title Synthetic Dataset Distribution (500 Golden Samples)
-    "Category A: Perfect Three-Way Match (40%)" : 200
+    "Category A: Perfect Two-Way Match (40%)" : 200
     "Category B: Temporal & Invoicing Timing Lags (30%)" : 150
     "Category C: Regional Tax & FX Rounding (20%)" : 100
     "Category D: Critical Financial Discrepancies (10%)" : 50
@@ -20,10 +20,10 @@ pie title Synthetic Dataset Distribution (500 Golden Samples)
 
 | Category | Proportion | Sample Size | Description & Expected Agent Action |
 | :--- | :--- | :--- | :--- |
-| **A. Perfect Three-Way Match** | $40\%$ | $200\text{ records}$ | Identical invoice, contract, and ticket values across SAP, SFDC, and ServiceNow. Agent immediately auto-reconciles and persists state. |
-| **B. Temporal Timing Lags** | $30\%$ | $150\text{ records}$ | SFDC opportunity marked `Closed Won` on 07/31, SAP invoice generated on 08/02. Agent identifies timing window, verifies SLA grace period ($< 5\text{ days}$), and passes with note. |
+| **A. Perfect Two-Way Match** | $40\%$ | $200\text{ records}$ | Identical billed amounts, contract caps, and ticket values across Salesforce and ServiceNow. Agent immediately auto-reconciles and persists state. |
+| **B. Temporal Timing Lags** | $30\%$ | $150\text{ records}$ | SFDC opportunity marked `Closed Won` on 07/31, ServiceNow provisioning completed on 08/04. Agent identifies timing window, verifies SLA grace period ($< 5\text{ days}$), and passes with note. |
 | **C. Tax & FX Rounding** | $20\%$ | $100\text{ records}$ | Small variance ($\le \$5.00$) due to EUR/USD floating conversion or VAT rounding differences. Agent auto-calculates variance and applies tolerance rules. |
-| **D. Critical Financial Discrepancies** | $10\%$ | $50\text{ records}$ | Significant variance ($> \$5,000$) due to missing line items or contract mismatch. Agent surfaces **Explosive Variance Badge**, renders Three-Way Diff Table, and requires **HITL cryptographic authorization**. |
+| **D. Critical Financial Discrepancies** | $10\%$ | $50\text{ records}$ | Significant variance ($> \$5,000$) due to missing contract lines or dispute overage. Agent surfaces **Explosive Variance Badge**, renders Side-by-Side Diff Table, and requires **HITL cryptographic authorization**. |
 
 ---
 
@@ -48,7 +48,7 @@ graph TD
 | :--- | :--- | :--- | :--- |
 | **Discrepancy Recall** | $\frac{\text{True Positives}}{\text{True Positives} + \text{False Negatives}}$ | $\ge 99.0\%$ | $30\%$ |
 | **Root-Cause Precision** | $\frac{\text{Accurate Explanations}}{\text{Total Flagged Variances}}$ | $\ge 96.5\%$ | $25\%$ |
-| **A2UI Schema Compliance** | $\frac{\text{Valid v0.8 JSON Payloads}}{\text{Total Generated Outputs}}$ | $100.0\%$ | $25\%$ |
+| **A2UI Schema Compliance** | $\frac{\text{Valid v0.9 JSON Payloads}}{\text{Total Generated Outputs}}$ | $100.0\%$ | $25\%$ |
 | **P95 Latency Compliance** | $\frac{\text{Reconciliations } \le 2.8\text{s}}{\text{Total Reconciliations}}$ | $\ge 95.0\%$ | $20\%$ |
 
 ---
@@ -58,9 +58,6 @@ graph TD
 Execute the golden benchmark test runner from the root directory:
 
 ```bash
-# Run the complete 500-sample benchmark evaluation
-go test -v -timeout 15m ./tests/golden/... \
-  --eval-model="gemini-3.1-pro" \
-  --dataset="data/golden_500_samples.json" \
-  --output="docs/benchmark_results.json"
+# Run Go test regression harness
+go test -v ./tests/... -run TestGoldenEvaluation_500
 ```

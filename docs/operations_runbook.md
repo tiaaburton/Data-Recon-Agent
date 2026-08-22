@@ -18,7 +18,7 @@ graph LR
 
 | Metric Name | Target SLO | Alerting Threshold | Resolution Procedure |
 | :--- | :--- | :--- | :--- |
-| `recon_agent/reconciliation_latency_p95` | $\le 2.8\text{ s}$ | $> 3.5\text{ s}$ for $5\text{ mins}$ | Inspect Gemini API quota or slow SAP connector response. |
+| `recon_agent/reconciliation_latency_p95` | $\le 2.8\text{ s}$ | $> 3.5\text{ s}$ for $5\text{ mins}$ | Inspect Gemini API quota or slow connector response. |
 | `recon_agent/pubsub_subscription_lag` | $\le 50\text{ msgs}$ | $> 250\text{ msgs}$ for $3\text{ mins}$ | Scale out Cloud Run maximum container instances. |
 | `recon_agent/dlq_dead_letter_count` | $0\text{ msgs}$ | $> 1\text{ msg}$ immediate | Triage poison message in DLQ and inspect schema parser. |
 | `recon_agent/hitl_token_expiration_rate` | $\le 2\%$ | $> 10\%$ for $15\text{ mins}$ | Notify operations team of pending approval backlog. |
@@ -80,18 +80,18 @@ gcloud run services update data-recon-agent \
 
 ## 4. Connector Incident Response & Circuit Breaking
 
-If SAP S/4HANA or Salesforce undergoes planned maintenance or suffers an outage:
+If ServiceNow or Salesforce undergoes planned maintenance or suffers an outage:
 
 1. **Enable Connector Circuit Breaker**:
    ```bash
    # Set mock mode fallback via Cloud Run environment variable
    gcloud run services update data-recon-agent \
      --region=us-central1 \
-     --update-env-vars="SAP_CONNECTOR_MODE=MOCK_FALLBACK"
+     --update-env-vars="CONNECTOR_FALLBACK_MODE=ENABLED"
    ```
 2. **Review Worker Health Logs**:
    ```bash
-   gcloud logging read 'resource.type="cloud_run_revision" AND jsonPayload.worker="SAPWorker"' \
+   gcloud logging read 'resource.type="cloud_run_revision" AND jsonPayload.worker="SFWorker"' \
      --limit=20 \
      --format=json
    ```
@@ -99,5 +99,5 @@ If SAP S/4HANA or Salesforce undergoes planned maintenance or suffers an outage:
    ```bash
    gcloud run services update data-recon-agent \
      --region=us-central1 \
-     --update-env-vars="SAP_CONNECTOR_MODE=LIVE_ODATA"
+     --update-env-vars="CONNECTOR_FALLBACK_MODE=DISABLED"
    ```

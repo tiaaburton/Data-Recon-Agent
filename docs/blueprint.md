@@ -47,7 +47,7 @@ Data-Recon-Agent/
 │   ├── a2ui/                         # A2UI v0.9 declarative card builders
 │   ├── agent/                        # Coordinator & sub-agent orchestrators
 │   ├── compaction/                   # Sliding window token compactor
-│   ├── connectors/                   # ServiceNow, Salesforce & SAP connectors
+│   ├── connectors/                   # ServiceNow & Salesforce connectors
 │   ├── errorhandling/                # GuidedError recovery models
 │   ├── gateway/                      # Gemini Enterprise SSE streamer & OpenAPI
 │   ├── hitl/                         # Ed25519 & HMAC-SHA256 signature validator
@@ -110,7 +110,6 @@ type ReconciliationEvent struct {
 	AccountName    string              `json:"account_name" validate:"required"`
 	ServiceNowINC  string              `json:"servicenow_inc_id,omitempty"`
 	SalesforceCTR  string              `json:"salesforce_ctr_id,omitempty"`
-	SAPInvoiceID   string              `json:"sap_invoice_id,omitempty"`
 	VarianceAmount float64             `json:"variance_amount"`
 	Currency       string              `json:"currency" validate:"required,len=3"`
 	Severity       DiscrepancySeverity `json:"severity" validate:"required,oneof=LOW MEDIUM HIGH CRITICAL"`
@@ -120,26 +119,24 @@ type ReconciliationEvent struct {
 
 // MultiSystemSnapshot encapsulates the raw retrieved states across systems.
 type MultiSystemSnapshot struct {
-	ServiceNowTicket *ServiceNowTicketDetails `json:"servicenow_ticket,omitempty"`
-	SalesforceRecord *SalesforceContract      `json:"salesforce_contract,omitempty"`
-	SAPBillingDoc    *SAPBillingDocument      `json:"sap_billing_doc,omitempty"`
-	DeltaCalculations map[string]FieldDelta   `json:"delta_calculations"`
+	ServiceNowTicket  *ServiceNowTicketDetails `json:"servicenow_ticket,omitempty"`
+	SalesforceRecord  *SalesforceContract      `json:"salesforce_contract,omitempty"`
+	DeltaCalculations map[string]FieldDelta    `json:"delta_calculations"`
 }
 
 // FieldDelta captures a specific field-level mismatch across systems.
 type FieldDelta struct {
-	FieldName         string `json:"field_name"`
-	ServiceNowVal     any    `json:"servicenow_value"`
-	SalesforceVal     any    `json:"salesforce_value"`
-	SAPVal            any    `json:"sap_value"`
-	RecommendedSource string `json:"recommended_source"`
+	FieldName         string  `json:"field_name"`
+	ServiceNowVal     any     `json:"servicenow_value"`
+	SalesforceVal     any     `json:"salesforce_value"`
+	RecommendedSource string  `json:"recommended_source"`
 	ConfidenceScore   float64 `json:"confidence_score"`
 }
 ```
 
 ---
 
-## 3. SAP `MockReconciler` Interface & Implementation
+## 3. Salesforce & ServiceNow Connector Interfaces
 
 ```go
 package connectors
@@ -152,55 +149,18 @@ import (
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/schemas"
 )
 
-// MockReconciler abstracts SAP OData v4 interactions for environments where direct SAP sandbox is unavailable.
-type MockReconciler interface {
-	GetBillingDocument(ctx context.Context, invoiceID string) (*schemas.SAPBillingDocument, error)
-	GetJournalEntry(ctx context.Context, accountID string, postingDate time.Time) (*schemas.SAPJournalEntry, error)
-	StageCreditMemo(ctx context.Context, req schemas.CreditMemoRequest) (*schemas.CreditMemoResult, error)
-	SimulateODataPost(ctx context.Context, endpoint string, payload []byte) (int, []byte, error)
+// SalesforceConnector abstracts Salesforce CRM & Revenue Cloud interactions.
+type SalesforceConnector interface {
+	GetContract(ctx context.Context, contractID string) (*schemas.SalesforceContract, error)
+	GetBillingSchedule(ctx context.Context, accountID string) (*schemas.BillingSchedule, error)
+	StageBillingAdjustment(ctx context.Context, req schemas.BillingAdjustmentRequest) (*schemas.AdjustmentResult, error)
 }
 
-type sapMockService struct {
-	invoices map[string]*schemas.SAPBillingDocument
-}
-
-func NewSAPMockService(seedData []*schemas.SAPBillingDocument) MockReconciler {
-	idx := make(map[string]*schemas.SAPBillingDocument)
-	for _, doc := range seedData {
-		idx[doc.InvoiceID] = doc
-	}
-	return &sapMockService{invoices: idx}
-}
-
-func (s *sapMockService) GetBillingDocument(ctx context.Context, invoiceID string) (*schemas.SAPBillingDocument, error) {
-	doc, exists := s.invoices[invoiceID]
-	if !exists {
-		return nil, fmt.Errorf("SAP OData v4 entity '/BillingDocument('%s')' not found", invoiceID)
-	}
-	return doc, nil
-}
-
-func (s *sapMockService) StageCreditMemo(ctx context.Context, req schemas.CreditMemoRequest) (*schemas.CreditMemoResult, error) {
-	return &schemas.CreditMemoResult{
-		CreditMemoID: fmt.Sprintf("CM-%d", time.Now().UnixNano()%100000),
-		Status:       "STAGED",
-		Amount:       req.Amount,
-		Currency:     req.Currency,
-		CreatedOn:    time.Now(),
-	}, nil
-}
-
-func (s *sapMockService) GetJournalEntry(ctx context.Context, accountID string, postingDate time.Time) (*schemas.SAPJournalEntry, error) {
-	return &schemas.SAPJournalEntry{
-		JournalID:   fmt.Sprintf("JE-%s-%d", accountID, postingDate.Year()),
-		AccountID:   accountID,
-		PostingDate: postingDate,
-		Balance:     0.00,
-	}, nil
-}
-
-func (s *sapMockService) SimulateODataPost(ctx context.Context, endpoint string, payload []byte) (int, []byte, error) {
-	return 201, []byte(`{"d":{"status":"SUCCESS","message":"OData entity created"}}`), nil
+// ServiceNowConnector abstracts ServiceNow ITSM dispute and incident management.
+type ServiceNowConnector interface {
+	GetIncident(ctx context.Context, incidentID string) (*schemas.ServiceNowTicketDetails, error)
+	AppendWorkNotes(ctx context.Context, incidentID, notes string) error
+	ResolveDispute(ctx context.Context, incidentID, resolutionCode string) error
 }
 ```
 

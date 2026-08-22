@@ -17,11 +17,10 @@ This guide provides the exact specifications for UI/UX designers to create custo
 | Asset Name | Target Filepath | Dimensions | Usage & Trigger |
 | :--- | :--- | :--- | :--- |
 | **Explosive Variance Alert Badge** | `assets/figma/badges/explosive_badge_v2.svg` | $32 \times 32\text{ px}$ (viewBox: `0 0 32 32`) | Rendered when financial discrepancy exceeds critical threshold ($> \$5,000$). |
-| **Three-Way Diff Check Icon** | `assets/figma/icons/three_way_match.svg` | $24 \times 24\text{ px}$ (viewBox: `0 0 24 24`) | Rendered on reconciled rows matching SAP, SFDC, and ServiceNow. |
+| **Two-Way Diff Match Icon** | `assets/figma/icons/two_way_match.svg` | $24 \times 24\text{ px}$ (viewBox: `0 0 24 24`) | Rendered on reconciled rows matching Salesforce and ServiceNow. |
 | **Signed Mutation Shield** | `assets/figma/badges/signed_shield.svg` | $24 \times 24\text{ px}$ (viewBox: `0 0 24 24`) | Rendered on HITL approval cards with valid Ed25519 signatures. |
 | **System Logo: ServiceNow** | `assets/figma/logos/servicenow_badge.svg` | $20 \times 20\text{ px}$ (viewBox: `0 0 20 20`) | Entity source attribution tag. |
 | **System Logo: Salesforce** | `assets/figma/logos/salesforce_badge.svg` | $20 \times 20\text{ px}$ (viewBox: `0 0 20 20`) | Entity source attribution tag. |
-| **System Logo: SAP S/4HANA** | `assets/figma/logos/sap_badge.svg` | $20 \times 20\text{ px}$ (viewBox: `0 0 20 20`) | Entity source attribution tag. |
 
 ---
 
@@ -94,18 +93,18 @@ The **Explosive Variance Badge** is a custom visual indicator designed to immedi
 
 ## 4. Custom Card Layouts in Figma
 
-### 4.1. Three-Way Diff Matrix Card (`360px` Mobile / `680px` Desktop)
+### 4.1. Side-by-Side Diff Matrix Card (`360px` Mobile / `680px` Desktop)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ [★ Explosive Badge] CRITICAL VARIANCE DETECTED: -$14,250.00      │
-│ SAP Invoice: #INV-2026-9081 │ SFDC Opp: #OPP-8821 │ SN: #INC-4412│
+│ Salesforce CTR: #CTR-2026-001 │ ServiceNow: #INC-4412            │
 ├──────────────────────────────────────────────────────────────────┤
-│ FIELD            │ SAP S/4HANA     │ SALESFORCE      │ SERVICENOW│
-├──────────────────┼─────────────────┼─────────────────┼───────────┤
-│ Net Amount       │ $145,000.00     │ $130,750.00 ⚠️  │ $145,000  │
-│ Tax / Currency   │ USD 8.25%       │ USD 0.00% ⚠️    │ USD 8.25% │
-│ Status           │ POSTED          │ CLOSED WON      │ RESOLVED  │
+│ FIELD                    │ SALESFORCE CRM    │ SERVICENOW ITSM   │
+├──────────────────────────┼───────────────────┼───────────────────┤
+│ Billed Line Item Total   │ $145,000.00 ⚠️    │ $130,750.00       │
+│ Agreed Contract Cap      │ $130,750.00       │ N/A               │
+│ Dispute Credit Status    │ PENDING_CREDIT    │ RESOLVED (#INC)   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,8 +112,8 @@ The **Explosive Variance Badge** is a custom visual indicator designed to immedi
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ 🛡️ HITL ACTION REQUIRED: SAP S/4HANA Mutation                     │
-│ Target: Adjust Invoice #INV-2026-9081 by +$14,250.00             │
+│ 🛡️ HITL ACTION REQUIRED: Salesforce Revenue Mutation             │
+│ Target: Adjust Contract Schedule #CTR-2026-001 by -$14,250.00    │
 ├──────────────────────────────────────────────────────────────────┤
 │ Signature: 9f82ab4... (Ed25519 Valid) │ Expires in: 04:59        │
 ├──────────────────────────────────────────────────────────────────┤
@@ -136,11 +135,10 @@ Data-Recon-Agent/
         │   ├── explosive_badge_v2.svg
         │   └── signed_shield.svg
         ├── icons/
-        │   ├── three_way_match.svg
+        │   ├── two_way_match.svg
         │   ├── alert_warning.svg
         │   └── check_verified.svg
         ├── logos/
-        │   ├── sap_badge.svg
         │   ├── salesforce_badge.svg
         │   └── servicenow_badge.svg
         └── cards/

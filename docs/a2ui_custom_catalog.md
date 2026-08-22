@@ -15,9 +15,9 @@ Default conversational UI toolkits in modern LLM platforms generally provide onl
 - Generic rectangular confirmation buttons ("Yes" / "No").
 - Unstyled bullet lists with no layout intelligence.
 
-For high-stakes enterprise workflows—such as **Data Reconciliation across ServiceNow, Salesforce, and SAP**—these default widgets completely fall apart:
+For high-stakes enterprise workflows—such as **Data Reconciliation between ServiceNow ITSM and Salesforce Revenue Cloud**—these default widgets completely fall apart:
 1. **Lack of Multi-Dimensional Delta Visualization**: A tabular text markdown dump cannot clearly highlight which specific field has diverged, why the discrepancy occurred, or what the financial variance magnitude is.
-2. **Missing Safety & Cryptographic Context**: Generic buttons fail to convey that an action is a high-stakes, irreversible ERP write mutation backed by a cryptographic audit signature.
+2. **Missing Safety & Cryptographic Context**: Generic buttons fail to convey that an action is a high-stakes, irreversible write mutation backed by a cryptographic audit signature.
 3. **No Dynamic Visual Urgency**: Enterprise operators need instantaneous visual hierarchy (e.g. explosive variance badges for high-value financial drift vs subtle muted pills for minor SLA discrepancies).
 
 ### 1.2. The Custom A2UI Solution
@@ -58,7 +58,7 @@ Highlights critical anomalies with an explosive visual callout, severity tag, an
     "title": "Critical Billing Discrepancy Detected",
     "account_name": "Acme Global Enterprise (ACC-89102)",
     "variance_display": "$45,200.00 USD",
-    "systems_involved": ["ServiceNow", "Salesforce", "SAP S/4HANA"],
+    "systems_involved": ["ServiceNow", "Salesforce"],
     "figma_asset_ref": "assets/figma/badges/explosive_badge_v2.svg",
     "custom_style": {
       "aura_pulse_animation": true,
@@ -74,7 +74,7 @@ graph TD
     subgraph ExplosiveBadge ["DiscrepancyAlertBadge (Explosive Style)"]
         Icon["💥 [Figma: explosive_badge_v2.svg]"]
         Title["<b>CRITICAL DISCREPANCY: $45,200.00 USD</b>"]
-        Subtitle["Account: Acme Global Enterprise | Systems: ServiceNow + Salesforce + SAP"]
+        Subtitle["Account: Acme Global Enterprise | Systems: ServiceNow + Salesforce"]
     end
     classDef explosiveStyle fill:#FCE8E6,stroke:#D93025,stroke-width:2px,color:#A50E0E;
     class ExplosiveBadge explosiveStyle;
@@ -82,8 +82,8 @@ graph TD
 
 ---
 
-### 3.2. `MultiSystemDiffTable` (Three-Way Side-by-Side Reconciliation)
-Provides interactive side-by-side comparison across ServiceNow, Salesforce, and SAP OData records with field-level divergence highlights.
+### 3.2. `MultiSystemDiffTable` (Side-by-Side Cross-System Reconciliation)
+Provides interactive side-by-side comparison across ServiceNow ITSM and Salesforce Revenue Cloud records with field-level divergence highlights.
 
 ```json
 {
@@ -92,35 +92,31 @@ Provides interactive side-by-side comparison across ServiceNow, Salesforce, and 
   "properties": {
     "correlation_id": "RECON-2026-0816-092",
     "columns": [
-      { "id": "field_name", "title": "Reconciled Field", "width": "25%" },
-      { "id": "sn_val", "title": "ServiceNow (INC-88219)", "width": "25%", "system_icon": "servicenow" },
-      { "id": "sf_val", "title": "Salesforce (CTR-4401)", "width": "25%", "system_icon": "salesforce" },
-      { "id": "sap_val", "title": "SAP S/4HANA (INV-99042)", "width": "25%", "system_icon": "sap" }
+      { "id": "field_name", "title": "Reconciled Field", "width": "34%" },
+      { "id": "sn_val", "title": "ServiceNow (INC-88219)", "width": "33%", "system_icon": "servicenow" },
+      { "id": "sf_val", "title": "Salesforce (CTR-4401)", "width": "33%", "system_icon": "salesforce" }
     ],
     "rows": [
       {
         "field_name": "Billed Line Item Total",
         "sn_val": "$125,000.00",
-        "sf_val": "$125,000.00",
-        "sap_val": "$170,200.00",
+        "sf_val": "$170,200.00",
         "has_mismatch": true,
-        "divergent_column": "sap_val",
-        "suggested_canonical_source": "Salesforce"
+        "divergent_column": "sf_val",
+        "suggested_canonical_source": "ServiceNow"
       },
       {
         "field_name": "SLA Service Credit Status",
         "sn_val": "APPROVED (5% Penalty)",
         "sf_val": "PENDING_CREDIT",
-        "sap_val": "NOT_APPLIED",
         "has_mismatch": true,
-        "divergent_column": "sap_val",
+        "divergent_column": "sf_val",
         "suggested_canonical_source": "ServiceNow"
       },
       {
         "field_name": "Payment Term",
         "sn_val": "Net 30",
         "sf_val": "Net 30",
-        "sap_val": "Net 30",
         "has_mismatch": false
       }
     ]
@@ -141,15 +137,15 @@ Empowers human operators to select canonical resolution actions directly from th
     "resolution_options": [
       {
         "id": "opt_credit_memo",
-        "title": "Stage SAP Credit Memo ($45,200.00)",
-        "subtitle": "Aligns SAP S/4HANA invoice to Salesforce Contract CTR-4401 and posts 5% SLA credit.",
+        "title": "Apply Salesforce Billing Credit ($45,200.00)",
+        "subtitle": "Aligns Salesforce billing to approved ServiceNow dispute INC-88219 and posts 5% SLA credit.",
         "impact_severity": "HIGH_MUTATION",
         "recommended": true
       },
       {
-        "id": "opt_update_sf",
-        "title": "Update Salesforce Contract Total to $170,200.00",
-        "subtitle": "Accepts SAP billing figure as the approved amended contract value.",
+        "id": "opt_update_sn",
+        "title": "Amend ServiceNow Dispute Record to $170,200.00",
+        "subtitle": "Accepts Salesforce billed total as authorized unmetered consumption.",
         "impact_severity": "HIGH_MUTATION",
         "recommended": false
       },
@@ -173,7 +169,7 @@ Empowers human operators to select canonical resolution actions directly from th
 ---
 
 ### 3.4. `SignedMutationCard` (HITL Cryptographic Authorization Card)
-Renders high-security cryptographic authorization stamps before executing ERP write actions.
+Renders high-security cryptographic authorization stamps before executing ERP / CRM write actions.
 
 ```json
 {
@@ -181,8 +177,8 @@ Renders high-security cryptographic authorization stamps before executing ERP wr
   "version": "v0.9",
   "properties": {
     "mutation_id": "MUT-78921",
-    "target_system": "SAP S/4HANA (Production)",
-    "action_summary": "POST /sap/opu/odata4/CreditMemo (Amount: -$45,200.00 USD)",
+    "target_system": "Salesforce Revenue Cloud (Production)",
+    "action_summary": "PATCH /services/data/v60.0/sobjects/BillingSchedule (Amount: -$45,200.00 USD)",
     "cryptographic_stamp": {
       "algorithm": "HMAC-SHA256 / Ed25519",
       "signature_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -216,7 +212,6 @@ To ensure cohesive design system collaboration across Engineering and Product De
   - `figma:badge-explosive-v2` $\to$ Used in `DiscrepancyAlertBadge`
   - `figma:icon-connector-servicenow` $\to$ Brand header icon
   - `figma:icon-connector-salesforce` $\to$ Brand header icon
-  - `figma:icon-connector-sap` $\to$ Brand header icon
   - `figma:stamp-hitl-verified` $\to$ Used in `SignedMutationCard`
 
 > [!TIP]

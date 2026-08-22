@@ -17,10 +17,10 @@ graph TD
     end
 
     subgraph ConnectorTools ["Enterprise Connectors (MCP)"]
-        T_SN["servicenow.query_incidents"]
-        T_SF["salesforce.query_opportunities"]
-        T_SAP_Q["sap.query_invoices"]
-        T_SAP_M["sap.post_variance_adjustment"]
+        T_SN_Q["servicenow.query_incidents"]
+        T_SN_M["servicenow.append_work_notes"]
+        T_SF_Q["salesforce.query_opportunities"]
+        T_SF_M["salesforce.stage_billing_adjustment"]
     end
 
     subgraph SecurityTools ["Governance & Security"]
@@ -68,10 +68,10 @@ Pulls a batch of raw discrepancy events from a designated Cloud Pub/Sub subscrip
         "publish_time": "2026-08-16T22:00:00Z",
         "ack_id": "ack-token-99120",
         "attributes": {
-          "source_system": "SAP_S4HANA",
+          "source_system": "SALESFORCE_REVENUE",
           "correlation_id": "corr-uuid-771"
         },
-        "data_base64": "eyJpbnZvaWNlX2lkIjoiSU5WLTIwMjYtOTA4MSIsImFtb3VudCI6MTQ1MDAwLjAwfQ=="
+        "data_base64": "eyJjb250cmFjdF9pZCI6IkNUUi0yMDI2LTAwMSIsImJpbGxlZF9hbW91bnQiOjE0NTAwMC4wMH0="
       }
     ]
   }
@@ -120,9 +120,10 @@ Publishes poison payloads to the Dead-Letter Queue (DLQ) or emits resolved recon
 
 ## 3. Systems of Record MCP Connectors
 
-### 3.1. ServiceNow Worker Toolset (`servicenow.query_incidents`)
+### 3.1. ServiceNow Worker Toolset (`servicenow.query_incidents` & `servicenow.append_work_notes`)
 
-Queries ServiceNow for IT service records, hardware assets, or billing dispute tickets matching a correlation ID.
+#### Query Incidents (`servicenow.query_incidents`)
+Queries ServiceNow for IT service records, dispute tickets, or SLA breaches matching a correlation ID.
 
 - **OAuth Scope**: `useraccount, incident.read`
 - **Request Parameters**:
@@ -141,15 +142,21 @@ Queries ServiceNow for IT service records, hardware assets, or billing dispute t
         "short_description": "Cloud Compute Over-provisioning Dispute",
         "state": "6",
         "state_display": "Resolved",
-        "total_cost": "145000.00",
+        "total_cost": "14250.00",
         "currency": "USD"
       }
     ]
   }
   ```
 
-### 3.2. Salesforce Worker Toolset (`salesforce.query_opportunities`)
+#### Append Work Notes (`servicenow.append_work_notes`)
+Updates ServiceNow dispute records with automated reconciliation findings and resolution hashes.
 
+---
+
+### 3.2. Salesforce Worker Toolset (`salesforce.query_opportunities` & `salesforce.stage_billing_adjustment`)
+
+#### Query Opportunities & Contracts (`salesforce.query_opportunities`)
 Executes SOQL queries against Salesforce Connected App endpoints to retrieve CRM contracts, line items, and closed-won opportunity amounts.
 
 - **OAuth Scope**: `api, refresh_token`
@@ -177,36 +184,15 @@ Executes SOQL queries against Salesforce Connected App endpoints to retrieve CRM
   }
   ```
 
-### 3.3. SAP S/4HANA OData Toolset (`sap.query_invoices` & `sap.post_variance_adjustment`)
-
-#### Query Invoices (`sap.query_invoices`)
-- **Request**:
-  ```json
-  {
-    "invoice_number": "INV-2026-9081",
-    "company_code": "1010"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "InvoiceNumber": "INV-2026-9081",
-    "FiscalYear": "2026",
-    "GrossAmount": 145000.00,
-    "Currency": "USD",
-    "TaxAmount": 11962.50,
-    "PostingStatus": "POSTED"
-  }
-  ```
-
-#### Post Variance Adjustment (`sap.post_variance_adjustment`)
+#### Stage Billing Adjustment (`salesforce.stage_billing_adjustment`)
 > **Restricted**: Can only be executed with a valid, cryptographically verified `SignedApprovalToken`.
+
 - **Request**:
   ```json
   {
-    "invoice_number": "INV-2026-9081",
+    "contract_id": "CTR-2026-001",
     "adjustment_amount": 14250.00,
-    "reason_code": "CRM_DISCREPANCY_ALIGNMENT",
+    "reason_code": "SERVICENOW_DISPUTE_CREDIT",
     "approval_token": "eyJhbGciOiJFZERTQSI..."
   }
   ```
@@ -220,14 +206,14 @@ Inspects and redacts sensitive PII (Social Security Numbers, Credit Cards, IBANs
 - **Request**:
   ```json
   {
-    "text": "Vendor contact Alice Smith (SSN: 999-12-3456) disputed invoice INV-2026-9081.",
+    "text": "Customer contact Alice Smith (SSN: 999-12-3456) disputed billing record BIL-2026-9081.",
     "info_types": ["US_SOCIAL_SECURITY_NUMBER", "PERSON_NAME", "EMAIL_ADDRESS"]
   }
   ```
 - **Response**:
   ```json
   {
-    "redacted_text": "Vendor contact [PERSON_NAME_1] (SSN: [REDACTED_SSN]) disputed invoice INV-2026-9081.",
+    "redacted_text": "Customer contact [PERSON_NAME_1] (SSN: [REDACTED_SSN]) disputed billing record BIL-2026-9081.",
     "findings_count": 2,
     "execution_time_ms": 14
   }

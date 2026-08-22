@@ -12,7 +12,7 @@ This document tracks all 23 core tasks defined in the **Data Reconciliation Agen
 | **02** | **Setup Slack** | High | Data | `Pending Sandbox` | Configure Slack 3P Federated Connector using Single-Region KMS keys in GCP for secure webhook verification. |
 | **03** | **Setup Salesforce** | High | Data | `Ready for Data` | Set up Salesforce 3P Federated Connector in Gemini Enterprise with Connected App OAuth JWT bearer scopes. |
 | **04** | **Setup Drive** | Low | Data | `Ready for Data` | Configure 1P Google Workspace Drive connector mapping directory scopes for contract PDF retrieval. |
-| **05** | **Setup SAP** | High | Data | `Implemented (Mock)` | Implement Go `MockReconciler` interface simulating SAP S/4HANA OData v4 `/BillingDocument` and `/JournalEntry`. |
+| **05** | **Setup Salesforce Billing** | High | Data | `Ready for Data` | Configure Salesforce Revenue Cloud / Billing schedule schemas and adjustment tool endpoints. |
 | **06** | **Terraform for APIs & Connectors** | Medium | Platform | `Completed (IaC)` | Terraform modules for Cloud Run (BYO-MCP), Vertex Agent Engine, Pub/Sub, Firestore, and KMS. |
 | **07** | **Synthetic Data Generation (AI Success)**| High | Data | `Completed (Go CLI)` | High-speed Go data synthesizer in `cmd/synth/` generating 500+ golden records matching enterprise schemas. |
 | **08** | **Core Agent Init (Go ADK 2.0)** | High | Development | `Completed` | Initialize Go project using ADK 2.0. Define Coordinator agent, constitution, and routing layer. |
@@ -21,9 +21,9 @@ This document tracks all 23 core tasks defined in the **Data Reconciliation Agen
 | **11** | **Context & Compaction Configuration** | High | Platform | `Completed` | Token-based sliding window compaction ($N=6$) with background summarization and Vertex AI context caching. |
 | **12** | **Persistent Session Store** | Medium | Platform | `Completed` | Provision Cloud Firestore for multi-turn session persistence under `/recon_sessions/{session_id}`. |
 | **13** | **Async Memory Operations** | Medium | Development | `Completed` | Native Go worker pool with buffered channels (`chan MemoryEvent`) and goroutines for background memory writes. |
-| **14** | **Multi-Agent Orchestrator Logic** | High | Development | `Completed` | Coordinator-Worker pattern orchestrating ServiceNow, Salesforce, and SAP sub-agents via A2A mesh. |
+| **14** | **Multi-Agent Orchestrator Logic** | High | Development | `Completed` | Coordinator-Worker pattern orchestrating ServiceNow and Salesforce sub-agents via A2A mesh. |
 | **15** | **Strategic Model Routing** | Medium | Development | `Completed` | Routing interface dynamically selecting Gemini 3.7 Flash Preview for lookups and Gemini 3.1 Pro for reconciliation. |
-| **16** | **Human-in-the-Loop Intercepts** | High | Development | `Completed` | Cryptographic state checks pausing ERP write actions until an Ed25519/HMAC-SHA256 signed webhook is validated. |
+| **16** | **Human-in-the-Loop Intercepts** | High | Development | `Completed` | Cryptographic state checks pausing write actions until an Ed25519/HMAC-SHA256 signed webhook is validated. |
 | **17** | **Event-driven Notification Runner** | High | Platform | `Completed` | Integrated handcrafted `google.adk.tools.pubsub` toolset for pull/ack streaming and DLQ routing. |
 | **18** | **Structured JSON Logging (slog)** | High | Development | `Completed` | Implement Go 1.21+ `log/slog` emitting Cloud Logging JSON with W3C `trace_id` and `span_id` correlation. |
 | **19** | **Intent vs. Outcome Logger** | Medium | Development | `Completed` | Decorator functions capturing LLM pre-execution intent hypothesis vs actual tool execution outcome. |
@@ -42,7 +42,7 @@ This document tracks all 23 core tasks defined in the **Data Reconciliation Agen
 
 ### Phase 2: Connectors, Mocks & Schemas
 - **Tasks**: #01, #02, #03, #04, #05, #07, #09
-- **Deliverables**: ServiceNow, Salesforce, Slack, Drive connector configs; SAP `MockReconciler` Go interface; Go Synthetic Data Generator (`cmd/synth/`); Strict Go JSON schemas with validation tags.
+- **Deliverables**: ServiceNow, Salesforce, Slack, Drive connector configs; Salesforce Revenue Cloud billing adjustment interfaces; Go Synthetic Data Generator (`cmd/synth/`); Strict Go JSON schemas with validation tags.
 
 ### Phase 3: Core Multi-Agent Orchestration & Governance
 - **Tasks**: #08, #10, #13, #14, #15, #16

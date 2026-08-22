@@ -7,9 +7,9 @@ This guide details the complete specification, data model design, and operationa
 ## 1. Executive Philosophy: Why Real Environment Seeding Matters
 
 An enterprise data reconciliation agent cannot be proven with static mock JSON. To demonstrate true agentic value:
-1. **Live SOQL / REST Execution**: The `SalesforceWorker` must query authentic Salesforce objects (`Opportunity`, `Contract`, `Account`) across live REST API endpoints.
+1. **Live SOQL / REST Execution**: The `SalesforceWorker` must query authentic Salesforce objects (`Opportunity`, `Contract`, `Account`, `BillingSchedule`) across live REST API endpoints.
 2. **Live Table API Execution**: The `ServiceNowWorker` must query live ServiceNow REST endpoints (`/api/now/table/incident`) with real HTTP Basic/OAuth authentication.
-3. **Correlated Enterprise Relational Graph**: Records across SAP S/4HANA, Salesforce, and ServiceNow must share consistent business keys (`contract_id`, `correlation_id`, `sap_invoice_ref`) with realistic variances.
+3. **Correlated Enterprise Relational Graph**: Records across Salesforce and ServiceNow must share consistent business keys (`contract_id`, `correlation_id`) with realistic variances.
 
 ---
 
@@ -22,10 +22,10 @@ classDiagram
     class SalesforceOpportunity {
         +String Id
         +String Name "[Acme Corp] - Contract CTR-2026-001"
-        +Double Amount "130,750.00"
+        +Double Amount "145,000.00"
         +String StageName "Closed Won"
         +Date CloseDate "2026-07-31"
-        +String Description "JSON: {correlation_id, contract_id, sap_invoice_ref}"
+        +String Description "JSON: {correlation_id, contract_id, contract_cap: 130750.00}"
     }
 
     class ServiceNowIncident {
@@ -33,34 +33,25 @@ classDiagram
         +String number "INC0010042"
         +String correlation_id "CORR-UUID-771"
         +String short_description "Billing Dispute: Overage on Contract CTR-2026-001"
-        +String description "JSON: {disputed_amount: 14250.00, sap_invoice_ref}"
+        +String description "JSON: {disputed_amount: 14250.00, contract_id: CTR-2026-001}"
         +String state "6 (Resolved)"
         +String category "Billing"
     }
 
-    class SAPBillingDocument {
-        +String InvoiceID "INV-2026-9081"
-        +Double GrossAmount "145,000.00"
-        +String Currency "USD"
-        +String PostingStatus "POSTED"
-        +String ContractRef "CTR-2026-001"
-    }
-
     SalesforceOpportunity "1" -- "1" ServiceNowIncident : Correlated via CTR-2026-001 / CORR-UUID-771
-    SAPBillingDocument "1" -- "1" SalesforceOpportunity : Reconciled via Invoice Variance
 ```
 
 ### 2.1. Salesforce Target Object: `Opportunity` (Standard)
 - **Target Object**: `Opportunity`
 - **Name**: Formatted as `"<Account_Name> - Contract [CTR-2026-XXXX]"` (Enables immediate text/SOQL search out-of-the-box).
-- **Amount**: Net closed-won contract value (e.g. `$130,750.00`).
+- **Amount**: Billed contract value (e.g. `$145,000.00`).
 - **StageName**: `"Closed Won"`.
 - **Description**: Stores strict JSON metadata:
   ```json
   {
     "correlation_id": "corr-uuid-771",
     "contract_id": "CTR-2026-001",
-    "sap_invoice_ref": "INV-2026-9081",
+    "agreed_cap": 130750.00,
     "variance_expected": -14250.00
   }
   ```
@@ -68,7 +59,7 @@ classDiagram
 ### 2.2. ServiceNow Target Table: `incident` (Standard ITSM)
 - **Target Table**: `incident` (Present out-of-the-box in 100% of ServiceNow instances).
 - **`correlation_id`**: Standard native ServiceNow field on the `task` table. Stores `corr-uuid-771`.
-- **`short_description`**: `"Billing Overcharge Dispute - Contract CTR-2026-001 - Invoice INV-2026-9081"`.
+- **`short_description`**: `"Billing Overcharge Dispute - Contract CTR-2026-001"`.
 - **`description`**: Structured JSON payload:
   ```json
   {
@@ -76,7 +67,6 @@ classDiagram
     "currency": "USD",
     "correlation_id": "corr-uuid-771",
     "contract_id": "CTR-2026-001",
-    "sap_invoice_ref": "INV-2026-9081",
     "discrepancy_type": "OVERAGE_CREDIT_APPROVED",
     "resolution_summary": "Credit Memo approved by Finance for $14,250 overage beyond contract cap."
   }
@@ -106,20 +96,15 @@ go run cmd/synth/main.go \
     "contract_id": "CTR-2026-001",
     "account_name": "Acme Global Technologies",
     "variance_archetype": "CRITICAL_DISCREPANCY",
-    "sap_invoice": {
-      "invoice_id": "INV-2026-9081",
-      "gross_amount": 145000.00,
-      "currency": "USD",
-      "posting_status": "POSTED"
-    },
     "salesforce_opportunity": {
       "name": "Acme Global - Contract [CTR-2026-001]",
-      "amount": 130750.00,
+      "billed_amount": 145000.00,
+      "agreed_cap": 130750.00,
       "stage": "Closed Won",
       "close_date": "2026-07-31"
     },
     "servicenow_incident": {
-      "short_description": "Billing Dispute - Contract CTR-2026-001 - Invoice INV-2026-9081",
+      "short_description": "Billing Dispute - Contract CTR-2026-001",
       "disputed_amount": 14250.00,
       "category": "billing",
       "state": "6"

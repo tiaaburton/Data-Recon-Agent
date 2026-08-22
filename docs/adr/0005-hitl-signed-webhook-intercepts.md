@@ -6,7 +6,7 @@
 - **GCP Services Involved**: Cloud Run, Secret Manager, Cloud KMS
 
 ## Context & Problem Statement
-Autonomous write mutations to enterprise financial ledgers (e.g. SAP Credit Memos, Salesforce billing schedules) carry significant financial and legal risk. We must guarantee that an agent cannot execute unauthorized writes due to prompt injection, hallucination, or unverified triggers.
+Autonomous write mutations to enterprise commercial contracts and billing ledgers (e.g. Salesforce billing schedules, ServiceNow dispute credits) carry significant financial and legal risk. We must guarantee that an agent cannot execute unauthorized writes due to prompt injection, hallucination, or unverified triggers.
 
 ## Decision Drivers
 - Zero unauthorized mutations to production ERP / CRM systems.
