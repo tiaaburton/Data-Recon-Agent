@@ -101,3 +101,17 @@ If ServiceNow or Salesforce undergoes planned maintenance or suffers an outage:
      --region=us-central1 \
      --update-env-vars="CONNECTOR_FALLBACK_MODE=DISABLED"
    ```
+
+---
+
+## 5. ServiceNow PDI Permissions & Role Checklist
+
+If ServiceNow Table API returns `401 Unauthorized` or `403 Forbidden`:
+
+1. **Initial Browser Confirmation**: Confirm that the 1-time password confirmation screen was completed in the web browser (`https://devXXXXX.service-now.com`) so `password_needs_reset` is `false`.
+2. **Required Roles**: In `sys_user.list`, ensure the API user has:
+   - `snc_platform_rest_api_access` / `snc_internal`
+   - `snc_basic_api`
+   - `rest_service`
+   - `itil`
+3. **Data Policy Compliance**: Ingest dispute tickets with `state = "2"` (In Progress) to prevent missing resolution code validation errors.

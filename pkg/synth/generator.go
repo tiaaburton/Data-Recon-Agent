@@ -190,6 +190,8 @@ func generateSingleRecord(r *rand.Rand, index int, archetype schemas.VarianceArc
 		Urgency:          "2",
 		State:            state,
 		CorrelationID:    corrID,
+		CloseCode:        "Solved (Permanently)",
+		CloseNotes:       "Resolved via automated cross-system billing reconciliation.",
 	}
 
 	return schemas.CorrelatedReconciliationRecord{

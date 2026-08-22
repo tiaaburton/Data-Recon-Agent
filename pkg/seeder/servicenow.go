@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/schemas"
@@ -32,8 +33,20 @@ func NewServiceNowSeeder(instanceURL, username, password string) *ServiceNowSeed
 
 // SeedIncident loads a single dispute record into the ServiceNow incident table.
 func (s *ServiceNowSeeder) SeedIncident(ctx context.Context, inc schemas.ServiceNowIncidentSeed) (string, error) {
-	endpoint := fmt.Sprintf("%s/api/now/table/incident", s.InstanceURL)
-	payload, err := json.Marshal(inc)
+	baseURL := strings.TrimRight(s.InstanceURL, "/")
+	endpoint := fmt.Sprintf("%s/api/now/table/incident", baseURL)
+
+	bodyMap := map[string]any{
+		"short_description": inc.ShortDescription,
+		"description":       inc.Description,
+		"category":          inc.Category,
+		"impact":            inc.Impact,
+		"urgency":           inc.Urgency,
+		"state":             "2", // In Progress (Active dispute ticket)
+		"correlation_id":    inc.CorrelationID,
+	}
+
+	payload, err := json.Marshal(bodyMap)
 	if err != nil {
 		return "", err
 	}
@@ -57,6 +70,11 @@ func (s *ServiceNowSeeder) SeedIncident(ctx context.Context, inc schemas.Service
 		return "", fmt.Errorf("servicenow insert failed (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	trimmedBody := bytes.TrimSpace(body)
+	if bytes.HasPrefix(trimmedBody, []byte("<")) {
+		return "", fmt.Errorf("servicenow returned HTML instead of JSON (status %d)", resp.StatusCode)
+	}
+
 	var res struct {
 		Result struct {
 			SysID  string `json:"sys_id"`
@@ -64,7 +82,7 @@ func (s *ServiceNowSeeder) SeedIncident(ctx context.Context, inc schemas.Service
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(body, &res); err != nil {
-		return "", fmt.Errorf("failed to parse servicenow response: %w", err)
+		return "", fmt.Errorf("failed to parse servicenow response: %w (body: %s)", err, string(body))
 	}
 
 	return res.Result.Number, nil

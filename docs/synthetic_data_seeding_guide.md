@@ -71,8 +71,31 @@ classDiagram
     "resolution_summary": "Credit Memo approved by Finance for $14,250 overage beyond contract cap."
   }
   ```
-- **`state`**: `6` (Resolved) or `7` (Closed).
+- **`state`**: `2` (In Progress) for active dispute tickets; `6` (Resolved) upon reconciliation.
 - **`category`**: `"inquiry"` or `"billing"`.
+
+### 2.3. ServiceNow Personal Developer Instance (PDI) Setup & API Permissions Guide
+
+When setting up a ServiceNow Personal Developer Instance (PDI) on `https://devXXXXX.service-now.com`, follow these mandatory configuration steps to enable seamless REST Table API access:
+
+#### 1. Initial Password Reset & 1-Time Browser Confirmation
+- When an instance is provisioned or its password is reset from [developer.servicenow.com](https://developer.servicenow.com), ServiceNow sets `password_needs_reset = true`.
+- **Action Required**: Log in via your web browser at `https://devXXXXX.service-now.com` at least once with the temporary password and complete the initial password confirmation. This clears the setup gate and enables Table API basic authentication.
+
+#### 2. Required Roles for Table API Ingestion (`sys_user`)
+In modern ServiceNow releases (Washington DC / Xanadu), inbound REST calls require explicit internal and API execution roles:
+1. In the Filter Navigator, navigate to **`sys_user.list`**.
+2. Open the **`admin`** user record (or your dedicated integration service user).
+3. Under the **Roles** related list at the bottom, click **Edit...** and assign:
+   - **`snc_platform_rest_api_access`** / **`snc_internal`**: Grants access to execute platform REST web services.
+   - **`snc_basic_api`**: Authorizes Basic Authentication requests against REST endpoints.
+   - **`rest_service`**: Authorizes general inbound REST Table API invocations.
+   - **`itil`**: Grants read and write permissions to the standard `incident` table.
+4. Verify that **`Locked out`** is **Unchecked**, **`Password needs reset`** is **Unchecked**, and **`Active`** is **Checked**.
+
+#### 3. Data Policy Compliance for Incident Creation
+- Initial dispute records are ingested with **`state = "2"` (In Progress)** to represent active billing disputes under investigation.
+- If inserting in **`state = "6"` (Resolved)**, ServiceNow Data Policies require mandatory **`close_code`** (Resolution code, e.g. `"Solved (Permanently)"`) and **`close_notes`** (e.g. `"Resolved via automated cross-system billing reconciliation."`).
 
 ---
 

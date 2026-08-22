@@ -32,6 +32,8 @@ type ServiceNowIncidentSeed struct {
 	Urgency          string `json:"urgency"`
 	State            string `json:"state"`
 	CorrelationID    string `json:"correlation_id"`
+	CloseCode        string `json:"close_code,omitempty"`
+	CloseNotes       string `json:"close_notes,omitempty"`
 }
 
 // CorrelatedReconciliationRecord binds Salesforce and ServiceNow records with shared keys.
