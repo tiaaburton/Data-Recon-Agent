@@ -16,6 +16,7 @@ jobs:
   deploy:
     name: Deploy to Vertex AI Agent Engine & Gateway
     runs-on: ubuntu-latest
+    if: ${{ secrets.GCP_WIF_PROVIDER != '' }}
     permissions:
       contents: read
       id-token: write
