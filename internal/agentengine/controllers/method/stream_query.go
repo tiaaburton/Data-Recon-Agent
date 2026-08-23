@@ -127,14 +127,34 @@ func (s *streamQueryHandler) streamJSONL(ctx context.Context, rw http.ResponseWr
 			}
 			if !hasFuncResp {
 				if pending := a2ui.PopPendingA2UIMessages(req.Input.SessionID); len(pending) > 0 {
-					if content, ok := m["content"].(map[string]any); ok {
-						existingParts, _ := content["parts"].([]any)
-						dataParts := make([]any, 0, len(pending))
-						for _, msg := range pending {
-							dataParts = append(dataParts, a2ui.BuildA2UIDataPart(msg))
+					dataParts := make([]any, 0, len(pending))
+					for _, msg := range pending {
+						dataParts = append(dataParts, a2ui.BuildA2UIDataPart(msg))
+					}
+					var targetContent map[string]any
+					if content, ok := m["content"].(map[string]any); ok && content != nil {
+						targetContent = content
+					} else if llmResp, ok := m["llm_response"].(map[string]any); ok && llmResp != nil {
+						if content, ok := llmResp["content"].(map[string]any); ok && content != nil {
+							targetContent = content
 						}
-						content["parts"] = append(existingParts, dataParts...)
-						content["role"] = "model"
+					}
+					if targetContent != nil {
+						existingParts, _ := targetContent["parts"].([]any)
+						targetContent["parts"] = append(existingParts, dataParts...)
+						targetContent["role"] = "model"
+						m["content"] = targetContent
+						if llmResp, ok := m["llm_response"].(map[string]any); ok && llmResp != nil {
+							llmResp["content"] = targetContent
+						}
+					} else {
+						m["content"] = map[string]any{
+							"role":  "model",
+							"parts": dataParts,
+						}
+						if llmResp, ok := m["llm_response"].(map[string]any); ok && llmResp != nil {
+							llmResp["content"] = m["content"]
+						}
 					}
 				}
 			}

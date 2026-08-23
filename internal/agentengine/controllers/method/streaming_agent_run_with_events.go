@@ -183,10 +183,16 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 								targetContent["parts"] = append(existingParts, dataParts...)
 								targetContent["role"] = "model"
 								ev0["content"] = targetContent
+								if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {
+									llmResp["content"] = targetContent
+								}
 							} else {
 								ev0["content"] = map[string]any{
 									"role":  "model",
 									"parts": dataParts,
+								}
+								if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {
+									llmResp["content"] = ev0["content"]
 								}
 							}
 						}

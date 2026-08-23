@@ -27,9 +27,12 @@ var (
 // BuildA2UIDataPart creates a native A2A DataPart map for Gemini Enterprise / Discovery Engine.
 func BuildA2UIDataPart(a2uiMessage any) map[string]any {
 	return map[string]any{
-		"kind": "data",
+		"kind":      "data",
+		"mimeType":  A2UIMimeType,
+		"mime_type": A2UIMimeType,
 		"metadata": map[string]any{
-			"mimeType": A2UIMimeType,
+			"mimeType":  A2UIMimeType,
+			"mime_type": A2UIMimeType,
 		},
 		"data": a2uiMessage,
 	}
