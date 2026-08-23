@@ -1,0 +1,47 @@
+# ==============================================================================
+# Google Cloud Build Pipeline for Go ADK Data Recon Agent
+# ==============================================================================
+steps:
+  # 1. Lint & Go Formatting Check
+  - name: 'golang:1.22'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        go vet ./cmd/... ./pkg/... ./tests/...
+        diff -u <(echo -n) <(gofmt -d $(git ls-files '*.go' | grep -v 'internal/agentengine'))
+
+  # 2. Run Test Suite & Golden Benchmark Evaluations
+  - name: 'golang:1.22'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        go test -v -race ./tests/... ./pkg/...
+
+  # 3. Build Go Artifacts
+  - name: 'golang:1.22'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        mkdir -p bin
+        go build -o bin/agent cmd/agent/main.go
+        go build -o bin/synth cmd/synth/main.go
+        go build -o bin/loader cmd/loader/main.go
+        go build -o bin/verifier cmd/verifier/main.go
+
+  # 4. Deploy to Vertex AI Agent Engine
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        bash scripts/deploy_agent_engine.sh
+
+substitutions:
+  _REGION: 'us-central1'
+  _AGENT_ENGINE_ID: '1487588105090236416'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

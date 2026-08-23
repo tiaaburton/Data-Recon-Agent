@@ -159,10 +159,45 @@ eval: ## Run 500-sample golden evaluation benchmark suite
 	@echo -e "$(CYAN)--> Running automated benchmark evaluation against golden dataset...$(RESET)"
 	@go test -v ./tests/... -run TestGoldenEvaluation_500
 
-.PHONY: lint
-lint: ## Run go vet and static code checks
-	@echo -e "$(CYAN)--> Running Go code linters and vetting...$(RESET)"
-	@go vet ./...
+.PHONY: fmt lint golangci-lint setup-hooks pre-commit ci
+fmt: ## Format Go source code and tidy imports
+	@echo -e "$(CYAN)--> Formatting Go code...$(RESET)"
+	@gofmt -s -w cmd pkg tests internal/cliutil
+	@which goimports >/dev/null 2>&1 && goimports -w -local github.com/tiaaburton/Data-Recon-Agent cmd pkg tests internal/cliutil || true
+	@which terraform >/dev/null 2>&1 && terraform -chdir=terraform fmt || true
+	@echo -e "$(GREEN)Formatting complete.$(RESET)"
+
+lint: ## Run go vet and golangci-lint checks
+	@echo -e "$(CYAN)--> Running Go vet and static code analysis...$(RESET)"
+	@go vet ./cmd/... ./pkg/... ./tests/...
+	@if which golangci-lint >/dev/null 2>&1; then \
+		echo -e "$(CYAN)--> Running golangci-lint...$(RESET)"; \
+		golangci-lint run --config=.golangci.yml; \
+	else \
+		echo -e "$(YELLOW)Notice: golangci-lint not installed in PATH. Install via 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'$(RESET)"; \
+	fi
+	@echo -e "$(GREEN)Linting passed.$(RESET)"
+
+setup-hooks: ## Install pre-commit git hooks
+	@echo -e "$(CYAN)--> Setting up git pre-commit hooks...$(RESET)"
+	@if which pre-commit >/dev/null 2>&1; then \
+		pre-commit install; \
+		echo -e "$(GREEN)✓ Pre-commit hooks installed.$(RESET)"; \
+	else \
+		echo -e "$(YELLOW)Install pre-commit with: pip install pre-commit && pre-commit install$(RESET)"; \
+	fi
+
+pre-commit: ## Run pre-commit checks on all files
+	@if which pre-commit >/dev/null 2>&1; then \
+		pre-commit run --all-files; \
+	else \
+		$(MAKE) fmt && $(MAKE) lint && $(MAKE) test; \
+	fi
+
+ci: fmt lint test eval build ## Run full continuous integration pipeline locally
+	@echo -e "$(GREEN)=================================================================$(RESET)"
+	@echo -e "$(GREEN)🎉 FULL LOCAL CI PIPELINE PASSED SUCCESSFULLY!$(RESET)"
+	@echo -e "$(GREEN)=================================================================$(RESET)"
 
 # ------------------------------------------------------------------------------
 # 6. Build & Execution

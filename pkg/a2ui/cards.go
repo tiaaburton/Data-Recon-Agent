@@ -6,17 +6,17 @@ import (
 
 // DiscrepancyCardParams contains the clean parameters passed by the LLM tool invocation.
 type DiscrepancyCardParams struct {
-	SurfaceID        string   `json:"surface_id"`
-	ContractID       string   `json:"contract_id"`
-	AccountName      string   `json:"account_name"`
-	ServiceNowINC    string   `json:"servicenow_inc_id"`
-	BilledAmount     float64  `json:"billed_amount"`
-	AgreedCap        float64  `json:"agreed_cap"`
-	VarianceAmount   float64  `json:"variance_amount"`
-	Severity         string   `json:"severity"` // "CRITICAL", "HIGH", "MEDIUM", "LOW"
-	DiscrepancyCause string   `json:"discrepancy_cause"`
-	Recommendation   string   `json:"recommendation"`
-	ResolutionAction string   `json:"resolution_action"`
+	SurfaceID        string  `json:"surface_id"`
+	ContractID       string  `json:"contract_id"`
+	AccountName      string  `json:"account_name"`
+	ServiceNowINC    string  `json:"servicenow_inc_id"`
+	BilledAmount     float64 `json:"billed_amount"`
+	AgreedCap        float64 `json:"agreed_cap"`
+	VarianceAmount   float64 `json:"variance_amount"`
+	Severity         string  `json:"severity"` // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+	DiscrepancyCause string  `json:"discrepancy_cause"`
+	Recommendation   string  `json:"recommendation"`
+	ResolutionAction string  `json:"resolution_action"`
 }
 
 // HITLApprovalCardParams contains parameters for the cryptographically gated write card.
@@ -24,7 +24,7 @@ type HITLApprovalCardParams struct {
 	SurfaceID      string  `json:"surface_id"`
 	MutationID     string  `json:"mutation_id"`
 	ContractID     string  `json:"contract_id"`
-	TargetSystem   string  `json:"target_system"` // e.g. "Salesforce Revenue Cloud"
+	TargetSystem   string  `json:"target_system"`   // e.g. "Salesforce Revenue Cloud"
 	AdjustmentType string  `json:"adjustment_type"` // e.g. "Credit Memo / Billing Schedule Adjustment"
 	CreditAmount   float64 `json:"credit_amount"`
 	SignatureHash  string  `json:"signature_hash"`
@@ -49,10 +49,10 @@ func BuildDiscrepancyEnvelope(params DiscrepancyCardParams) A2UIEnvelope {
 		ID:        "root-container",
 		Component: "CardContainer",
 		Props: map[string]any{
-			"elevation": 2,
-			"padding":   "16px",
+			"elevation":    2,
+			"padding":      "16px",
 			"borderRadius": "12px",
-			"border":    fmt.Sprintf("1px solid %s", badgeColor),
+			"border":       fmt.Sprintf("1px solid %s", badgeColor),
 		},
 		Children: []ComponentDef{
 			// 1. Header with Explosive Alert Badge
@@ -113,8 +113,8 @@ func BuildDiscrepancyEnvelope(params DiscrepancyCardParams) A2UIEnvelope {
 				ID:        "explanation-box",
 				Component: "InsightBox",
 				Props: map[string]any{
-					"title":       "Automated Root Cause Synthesis",
-					"explanation": params.DiscrepancyCause,
+					"title":          "Automated Root Cause Synthesis",
+					"explanation":    params.DiscrepancyCause,
 					"recommendation": params.Recommendation,
 				},
 			},

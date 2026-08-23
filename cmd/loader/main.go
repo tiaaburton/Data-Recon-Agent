@@ -79,7 +79,7 @@ func main() {
 					sfdcUser = envutil.PromptString(reader, "Salesforce Username", "tiaburton.dad9d78120c9@agentforce.com")
 					sfdcPass = envutil.PromptString(reader, "Salesforce Password + Security Token", "")
 					sfdcToken = envutil.PromptString(reader, "Salesforce Access Token (Optional if using password)", "")
-					
+
 					updates := map[string]string{
 						"SFDC_INSTANCE_URL": sfdcURL,
 						"SFDC_USERNAME":     sfdcUser,

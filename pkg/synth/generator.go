@@ -29,9 +29,9 @@ func GenerateRecords(count int) ([]schemas.CorrelatedReconciliationRecord, error
 	records := make([]schemas.CorrelatedReconciliationRecord, 0, count)
 
 	// Distribution breakdown
-	matchCount := int(float64(count) * 0.40)      // 40%
-	timingCount := int(float64(count) * 0.30)     // 30%
-	roundingCount := int(float64(count) * 0.20)   // 20%
+	matchCount := int(float64(count) * 0.40)                            // 40%
+	timingCount := int(float64(count) * 0.30)                           // 30%
+	roundingCount := int(float64(count) * 0.20)                         // 20%
 	criticalCount := count - (matchCount + timingCount + roundingCount) // 10%
 
 	idx := 1
@@ -98,10 +98,10 @@ func generateSingleRecord(r *rand.Rand, index int, archetype schemas.VarianceArc
 			"status":            "RECONCILED",
 		}
 		snDescMap = map[string]any{
-			"correlation_id": corrID,
-			"contract_id":    contractID,
+			"correlation_id":  corrID,
+			"contract_id":     contractID,
 			"disputed_amount": 0.0,
-			"resolution":     "Monthly consumption matched contract baseline perfectly.",
+			"resolution":      "Monthly consumption matched contract baseline perfectly.",
 		}
 		shortDesc = fmt.Sprintf("Standard Billing Check - %s - %s", contractID, accountName)
 
@@ -109,16 +109,16 @@ func generateSingleRecord(r *rand.Rand, index int, archetype schemas.VarianceArc
 		variance = 0.0
 		lagDays := 3 + r.Intn(3) // 3-5 days
 		sfDescMap = map[string]any{
-			"correlation_id":    corrID,
-			"contract_id":       contractID,
-			"agreed_cap":        agreedCap,
-			"billed_amount":     billedAmount,
+			"correlation_id":     corrID,
+			"contract_id":        contractID,
+			"agreed_cap":         agreedCap,
+			"billed_amount":      billedAmount,
 			"provision_lag_days": lagDays,
-			"status":            "TIMING_LAG_APPROVED",
+			"status":             "TIMING_LAG_APPROVED",
 		}
 		snDescMap = map[string]any{
-			"correlation_id": corrID,
-			"contract_id":    contractID,
+			"correlation_id":    corrID,
+			"contract_id":       contractID,
 			"provisioning_date": closeDate.AddDate(0, 0, lagDays).Format("2006-01-02"),
 			"resolution":        fmt.Sprintf("Provisioning completed within %d-day grace period.", lagDays),
 		}
@@ -128,18 +128,18 @@ func generateSingleRecord(r *rand.Rand, index int, archetype schemas.VarianceArc
 		variance = math.Round((0.50+r.Float64()*4.0)*100) / 100 // $0.50 - $4.50
 		billedAmount = agreedCap + variance
 		sfDescMap = map[string]any{
-			"correlation_id":    corrID,
-			"contract_id":       contractID,
-			"agreed_cap":        agreedCap,
-			"billed_amount":     billedAmount,
-			"fx_variance":       variance,
-			"status":            "FX_ROUNDING_TOLERANCE",
-		}
-		snDescMap = map[string]any{
 			"correlation_id": corrID,
 			"contract_id":    contractID,
+			"agreed_cap":     agreedCap,
+			"billed_amount":  billedAmount,
+			"fx_variance":    variance,
+			"status":         "FX_ROUNDING_TOLERANCE",
+		}
+		snDescMap = map[string]any{
+			"correlation_id":  corrID,
+			"contract_id":     contractID,
 			"disputed_amount": variance,
-			"resolution":     fmt.Sprintf("Tax and VAT fractional rounding variance of $%.2f within tolerance threshold.", variance),
+			"resolution":      fmt.Sprintf("Tax and VAT fractional rounding variance of $%.2f within tolerance threshold.", variance),
 		}
 		shortDesc = fmt.Sprintf("Tax & FX Rounding Inquiry - %s ($%.2f delta)", contractID, variance)
 
@@ -162,11 +162,11 @@ func generateSingleRecord(r *rand.Rand, index int, archetype schemas.VarianceArc
 			"status":            "CRITICAL_OVERAGE_PENDING_HITL",
 		}
 		snDescMap = map[string]any{
-			"correlation_id":  corrID,
-			"contract_id":     contractID,
-			"disputed_amount": variance,
+			"correlation_id":   corrID,
+			"contract_id":      contractID,
+			"disputed_amount":  variance,
 			"discrepancy_type": "OVERAGE_CREDIT_APPROVED",
-			"resolution":      fmt.Sprintf("Finance approved credit memo of $%.2f for overage beyond contract cap.", variance),
+			"resolution":       fmt.Sprintf("Finance approved credit memo of $%.2f for overage beyond contract cap.", variance),
 		}
 		shortDesc = fmt.Sprintf("CRITICAL Billing Dispute - %s ($%.2f Overage)", contractID, variance)
 	}

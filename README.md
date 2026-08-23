@@ -100,6 +100,7 @@ make build                   # Compile bin/synth, bin/loader, bin/verifier, bin/
 
 All architectural design documents, runbooks, specifications, and scorecards are available in the [`docs/`](docs/) directory:
 
+- 🚀 **[CI/CD, Linting & Pre-Commit Guide](docs/ci_cd_and_linting_guide.md)** — GolangCI-Lint configuration, pre-commit hooks, and GitHub Actions / Cloud Build pipelines.
 - 🛡️ **[Agent Gateway & Agent Registry IaC](docs/agent_gateway_iac.md)** — Declarative Agent Gateway (Ingress/Egress), Service Extensions, IAP policies, and Agent Registry.
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
 - 🎯 **[Critical User Journeys (CUJs) & Scenario Catalog](docs/critical_user_journeys.md)** — 5 real enterprise scenarios for *Apex Global Cloud Services*, personas, natural language prompts, and A2UI results.

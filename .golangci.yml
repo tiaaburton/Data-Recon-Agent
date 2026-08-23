@@ -1,0 +1,96 @@
+# ==============================================================================
+# GolangCI-Lint Configuration for Enterprise Data Recon Agent
+# ==============================================================================
+
+run:
+  timeout: 5m
+  go: "1.22"
+  tests: true
+  skip-dirs:
+    - bin
+    - data
+    - internal/agentengine # Exclude internal forked ADK engine from strict style checks
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/tiaaburton/Data-Recon-Agent
+  gosec:
+    severity: medium
+    confidence: medium
+  misspell:
+    locale: US
+  revive:
+    rules:
+      - name: blank-imports
+        disabled: false
+      - name: context-as-argument
+        disabled: false
+      - name: dot-imports
+        disabled: false
+      - name: error-return
+        disabled: false
+      - name: error-strings
+        disabled: false
+      - name: error-naming
+        disabled: false
+      - name: exported
+        disabled: false
+      - name: if-return
+        disabled: false
+      - name: increment-decrement
+        disabled: false
+      - name: var-naming
+        disabled: false
+      - name: package-comments
+        disabled: false
+      - name: range
+        disabled: false
+      - name: receiver-naming
+        disabled: false
+      - name: time-naming
+        disabled: false
+      - name: unexported-return
+        disabled: false
+      - name: indent-error-flow
+        disabled: false
+      - name: errorf
+        disabled: false
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - ineffassign
+    - typecheck
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+    - gosec
+  disable:
+    - bodyclose
+    - dupl
+    - funlen
+    - goconst
+    - gocyclo
+
+issues:
+  exclude-use-default: true
+  max-issues-per-linter: 50
+  max-same-issues: 5
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck

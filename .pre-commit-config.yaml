@@ -1,0 +1,44 @@
+# ==============================================================================
+# Pre-Commit Hook Configuration
+# ==============================================================================
+# See https://pre-commit.com for more information
+# Install: pip install pre-commit && pre-commit install
+# Run:     pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(data/|tests/data/|.*\.json$)
+      - id: end-of-file-fixer
+        exclude: ^(data/|tests/data/|.*\.json$)
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.59.1
+    hooks:
+      - id: golangci-lint
+        args: ['--timeout=5m', '--config=.golangci.yml']
+
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fmt
+      - id: go-imports
+      - id: go-vet
+      - id: go-mod-tidy
+      - id: go-unit-tests
+        args: ['./tests/...']
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.92.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate

@@ -5,11 +5,11 @@ const ProtocolVersion = "v0.9"
 
 // A2UIEnvelope represents the root event payload streamed to Gemini Enterprise.
 type A2UIEnvelope struct {
-	Version          string                  `json:"version"`
-	CreateSurface    *CreateSurfacePayload   `json:"createSurface,omitempty"`
+	Version          string                   `json:"version"`
+	CreateSurface    *CreateSurfacePayload    `json:"createSurface,omitempty"`
 	UpdateComponents *UpdateComponentsPayload `json:"updateComponents,omitempty"`
 	UpdateDataModel  *UpdateDataModelPayload  `json:"updateDataModel,omitempty"`
-	DeleteSurface    *DeleteSurfacePayload   `json:"deleteSurface,omitempty"`
+	DeleteSurface    *DeleteSurfacePayload    `json:"deleteSurface,omitempty"`
 }
 
 // CreateSurfacePayload initializes a new interactive surface canvas.
@@ -36,8 +36,8 @@ type ActionEvent struct {
 
 // UpdateComponentsPayload delivers the hierarchical component graph.
 type UpdateComponentsPayload struct {
-	SurfaceID  string         `json:"surfaceId"`
-	Root       ComponentDef   `json:"root"`
+	SurfaceID string       `json:"surfaceId"`
+	Root      ComponentDef `json:"root"`
 }
 
 // UpdateDataModelPayload pushes reactive state bindings to the surface.
