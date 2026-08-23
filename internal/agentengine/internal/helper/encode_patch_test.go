@@ -95,7 +95,7 @@ func TestNonByteSlicesAreStillArrays(t *testing.T) {
 // are transformed into native A2A DataPart envelopes (kind: "data") so Discovery Engine
 // does not treat them as unsupported file attachments.
 func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
-	rawPayload := `<a2a_datapart_json>{"beginRendering":{"surfaceId":"test-surface","root":"root","catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}</a2a_datapart_json>`
+	rawPayload := `<a2a_datapart_json>{"version":"v0.9","createSurface":{"surfaceId":"test-surface","catalogId":"https://a2ui.org/specification/v0_9/basic_catalog.json"}}</a2a_datapart_json>`
 	content := &genai.Content{
 		Role: "model",
 		Parts: []*genai.Part{
@@ -144,8 +144,8 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected data object, got: %T", part["data"])
 	}
 
-	beginRendering, ok := dataObj["beginRendering"].(map[string]any)
-	if !ok || beginRendering["surfaceId"] != "test-surface" {
-		t.Fatalf("expected beginRendering.surfaceId='test-surface', got: %#v", dataObj)
+	createSurface, ok := dataObj["createSurface"].(map[string]any)
+	if !ok || createSurface["surfaceId"] != "test-surface" {
+		t.Fatalf("expected createSurface.surfaceId='test-surface', got: %#v", dataObj)
 	}
 }

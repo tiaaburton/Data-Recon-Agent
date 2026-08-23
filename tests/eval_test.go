@@ -344,22 +344,22 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected a2ui_status A2UI_SURFACE_SYNTHESIZED on function response part")
 	}
 
-	foundBeginRendering := false
-	foundSurfaceUpdate := false
+	foundCreateSurface := false
+	foundUpdateComponents := false
 	for _, p := range resEvent.Content.Parts {
 		if strings.Contains(p.Text, "<a2a_datapart_json>") {
-			if strings.Contains(p.Text, "beginRendering") && strings.Contains(p.Text, "standard_catalog_definition.json") {
-				foundBeginRendering = true
+			if strings.Contains(p.Text, "createSurface") && strings.Contains(p.Text, "basic_catalog.json") {
+				foundCreateSurface = true
 			}
-			if strings.Contains(p.Text, "surfaceUpdate") && strings.Contains(p.Text, "btn-stage-credit") {
-				foundSurfaceUpdate = true
+			if strings.Contains(p.Text, "updateComponents") && strings.Contains(p.Text, "btn-stage-credit") {
+				foundUpdateComponents = true
 			}
 		}
 	}
 
-	if !foundBeginRendering || !foundSurfaceUpdate {
-		t.Fatalf("Expected native A2A DataParts in Text parts for beginRendering and surfaceUpdate with buttons (begin=%v, update=%v)",
-			foundBeginRendering, foundSurfaceUpdate)
+	if !foundCreateSurface || !foundUpdateComponents {
+		t.Fatalf("Expected native A2A DataParts in Text parts for createSurface and updateComponents with buttons (create=%v, update=%v)",
+			foundCreateSurface, foundUpdateComponents)
 	}
 
 	t.Logf("✓ A2UIPartsPlugin successfully converted tool responses to native A2A DataParts with interactive buttons.")
