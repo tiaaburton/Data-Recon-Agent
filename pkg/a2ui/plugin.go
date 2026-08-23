@@ -67,12 +67,12 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 				if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
 					respMap := part.FunctionResponse.Response
 					var rawPayload any
-					if p, exists := respMap["validated_a2ui_json"]; exists {
-						rawPayload = p
-					} else if p, exists := respMap["a2ui_json"]; exists {
-						rawPayload = p
-					} else if p, exists := respMap["a2ui_payload"]; exists {
-						rawPayload = p
+					for k, v := range respMap {
+						lowerKey := strings.ToLower(k)
+						if lowerKey == "validated_a2ui_json" || lowerKey == "a2ui_payload" || lowerKey == "a2ui_json" {
+							rawPayload = v
+							break
+						}
 					}
 
 					if rawPayload != nil {

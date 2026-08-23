@@ -54,15 +54,17 @@ type ReconcileContractArgs struct {
 }
 
 type ReconcileContractResult struct {
-	ContractID       string  `json:"contract_id"`
-	AccountName      string  `json:"account_name"`
-	BilledAmount     float64 `json:"billed_amount"`
-	AgreedCap        float64 `json:"agreed_cap"`
-	VarianceAmount   float64 `json:"variance_amount"`
-	Severity         string  `json:"severity"`
-	DiscrepancyCause string  `json:"discrepancy_cause"`
-	Recommendation   string  `json:"recommendation"`
-	A2UIPayload      string  `json:"a2ui_json"`
+	ContractID        string  `json:"contract_id"`
+	AccountName       string  `json:"account_name"`
+	BilledAmount      float64 `json:"billed_amount"`
+	AgreedCap         float64 `json:"agreed_cap"`
+	VarianceAmount    float64 `json:"variance_amount"`
+	Severity          string  `json:"severity"`
+	DiscrepancyCause  string  `json:"discrepancy_cause"`
+	Recommendation    string  `json:"recommendation"`
+	ValidatedA2UIJSON string  `json:"validated_a2ui_json"`
+	A2UIPayload       string  `json:"a2ui_payload"`
+	A2UIJSON          string  `json:"a2ui_json"`
 }
 
 func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (ReconcileContractResult, error) {
@@ -150,16 +152,19 @@ func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (Rec
 		Success:        true,
 	})
 
+	payloadStr := string(bytes)
 	return ReconcileContractResult{
-		ContractID:       record.ContractID,
-		AccountName:      record.AccountName,
-		BilledAmount:     record.BilledAmount,
-		AgreedCap:        record.AgreedCap,
-		VarianceAmount:   record.VarianceAmount,
-		Severity:         severity,
-		DiscrepancyCause: cause,
-		Recommendation:   recommendation,
-		A2UIPayload:      string(bytes),
+		ContractID:        record.ContractID,
+		AccountName:       record.AccountName,
+		BilledAmount:      record.BilledAmount,
+		AgreedCap:         record.AgreedCap,
+		VarianceAmount:    record.VarianceAmount,
+		Severity:          severity,
+		DiscrepancyCause:  cause,
+		Recommendation:    recommendation,
+		ValidatedA2UIJSON: payloadStr,
+		A2UIPayload:       payloadStr,
+		A2UIJSON:          payloadStr,
 	}, nil
 }
 
@@ -367,21 +372,15 @@ Your mission is to autonomously identify and resolve billing discrepancies acros
 
 Capabilities & Instructions:
 1. When asked to inspect or reconcile a contract (e.g. 'Reconcile contract CTR-2026-451'):
-   - ALWAYS call the 'reconcile_contract' tool first.
-   - Present the reconciliation result as an executive-ready, interactive Action Card in clean Markdown:
-     * 🚨 **Severity & Account Header**: State Account Name, Contract ID, and Severity Level.
-     * 📊 **Side-by-Side Comparison Table**:
-       | Metric / Schedule | Salesforce CRM | ServiceNow ITSM | Status |
-     * 🔍 **Root Cause & Cross-System Correlation**: Explain why the variance occurred (e.g. unapplied SLA dispute credits).
-     * ⚡ **Interactive Resolution Options**: Present clearly numbered action options for the human operator:
-       1️⃣ **Stage -$18,000.00 Salesforce Billing Credit (Recommended)** - Creates the credit memo in Salesforce and links to ServiceNow dispute.
-       2️⃣ **Escalate to Finance Operations** - Routes contract to manual auditing queue.
-       3️⃣ **Dismiss & Accept Tolerance** - Flags as acceptable FX/tax rounding variance.
-   - Guide the user: "Reply with **1** or your preferred option to execute the resolution workflow."
-2. When the user confirms or selects an action (e.g., "1", "Apply credit", "Option 1"):
+   - Call the 'reconcile_contract' tool first.
+   - Accompany the generated interactive A2UI resolution card with a clear, concise executive summary:
+     * State Account Name, Contract ID, financial variance amount, and severity.
+     * Highlight the identified root cause (e.g. unapplied SLA dispute credits in ServiceNow).
+     * Guide the operator: "Please review the discrepancy details and select an action button on the interactive card below to execute resolution."
+2. When the user confirms or clicks an action (e.g., "Stage -$18,000.00 Salesforce Billing Adjustment", "Apply credit", "Escalate"):
    - Call the 'apply_resolution_action' tool with the contract ID and selected action.
    - Confirm the transaction outcome with updated ledger status, credit ID, and ticket numbers.
-3. GOVERNANCE MANDATE: NEVER output raw JSON syntax, schema envelopes, or machine code blocks in your chat response. All data model envelopes are handled by internal tools.`
+3. GOVERNANCE MANDATE: NEVER output raw JSON syntax, schema envelopes, or machine code blocks in your chat response. All A2UI visual cards are synthesized via tool events.`
 
 	reconAgent, err := llmagent.New(llmagent.Config{
 		Name:        "data_recon_agent",
