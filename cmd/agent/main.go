@@ -32,7 +32,11 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/guardrails"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/logger"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/memory"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/schemas"
+	recontelemetry "github.com/tiaaburton/Data-Recon-Agent/pkg/telemetry"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/tools"
 )
 
@@ -62,7 +66,8 @@ type ReconcileContractResult struct {
 }
 
 func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (ReconcileContractResult, error) {
-	contractID := args.ContractID
+	start := time.Now()
+	contractID := guardrails.RedactPII(args.ContractID)
 	if contractID == "" {
 		contractID = "CTR-2026-001"
 	}
@@ -124,6 +129,27 @@ func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (Rec
 
 	bytes, _ := json.Marshal(cardMessages)
 
+	// Async Memory Bank persistence for audit history
+	memory.GetMemoryBank().AsyncPersistMemory(context.Background(), memory.MemoryRecord{
+		UserID:     "operator",
+		ContractID: record.ContractID,
+		Category:   memory.CategoryAuditHistory,
+		Key:        fmt.Sprintf("audit-%s", record.ContractID),
+		Content:    fmt.Sprintf("Variance=$%.2f Severity=%s Recommendation=%s", record.VarianceAmount, severity, recommendation),
+	})
+
+	// Record Intent vs Outcome Telemetry
+	recontelemetry.GetRecorder().Record(context.Background(), recontelemetry.IntentOutcomeRecord{
+		UserID:         "operator",
+		ContractID:     record.ContractID,
+		Intent:         recontelemetry.IntentReconcileContract,
+		Outcome:        recontelemetry.OutcomeDiscrepancyFlagged,
+		Severity:       severity,
+		VarianceAmount: record.VarianceAmount,
+		Duration:       time.Since(start),
+		Success:        true,
+	})
+
 	return ReconcileContractResult{
 		ContractID:       record.ContractID,
 		AccountName:      record.AccountName,
@@ -154,16 +180,42 @@ type ApplyResolutionResult struct {
 }
 
 func handleApplyResolution(ctx agent.Context, args ApplyResolutionArgs) (ApplyResolutionResult, error) {
-	contractID := args.ContractID
+	start := time.Now()
+	contractID := guardrails.RedactPII(args.ContractID)
 	if contractID == "" {
-		contractID = "CTR-2026-001"
+		contractID = "CTR-2026-451"
 	}
 	action := args.Action
-	if action == "" {
+	if action == "" || action == "1" {
 		action = "stage_salesforce_billing_adjustment"
+	} else if action == "2" {
+		action = "escalate_finance_ops"
+	} else if action == "3" {
+		action = "dismiss_variance"
 	}
 
 	txID := fmt.Sprintf("TX-ADJ-%d", time.Now().Unix())
+	msg := fmt.Sprintf("Billing adjustment for contract %s successfully posted to Salesforce Revenue Cloud ledger. Correlated ServiceNow dispute ticket INC0010042 marked as resolved.", contractID)
+
+	// Async Memory Bank persistence for dispute resolution
+	memory.GetMemoryBank().AsyncPersistMemory(context.Background(), memory.MemoryRecord{
+		UserID:     "operator",
+		ContractID: contractID,
+		Category:   memory.CategoryDisputeResolution,
+		Key:        fmt.Sprintf("resolution-%s", contractID),
+		Content:    fmt.Sprintf("Action=%s TransactionID=%s Message=%s", action, txID, msg),
+	})
+
+	// Record Intent vs Outcome Telemetry
+	recontelemetry.GetRecorder().Record(context.Background(), recontelemetry.IntentOutcomeRecord{
+		UserID:     "operator",
+		ContractID: contractID,
+		Intent:     recontelemetry.IntentExecuteResolution,
+		Outcome:    recontelemetry.OutcomeActionApplied,
+		Duration:   time.Since(start),
+		Success:    true,
+	})
+
 	return ApplyResolutionResult{
 		ContractID:       contractID,
 		Action:           action,
@@ -171,7 +223,7 @@ func handleApplyResolution(ctx agent.Context, args ApplyResolutionArgs) (ApplyRe
 		TransactionID:    txID,
 		SalesforceCredit: "CR-SFDC-2026-8841 (STAGED)",
 		ServiceNowTicket: "INC0010042 (RESOLVED)",
-		ConfirmationNote: fmt.Sprintf("Billing adjustment for contract %s successfully posted to Salesforce Revenue Cloud ledger. Correlated ServiceNow dispute ticket INC0010042 marked as resolved.", contractID),
+		ConfirmationNote: msg,
 		ExecutedAt:       time.Now().UTC(),
 	}, nil
 }
@@ -363,14 +415,24 @@ Capabilities & Instructions:
 
 	a2uiPlugin, err := a2ui.NewA2UIPartsPlugin()
 	if err != nil {
-		log.Fatalf("Failed to create A2UI Parts Plugin: %v", err)
+		logger.Error(ctx, "Failed to create A2UI Parts Plugin", "error", err)
+	}
+
+	piiPlugin, err := guardrails.NewPIIGuardrailPlugin()
+	if err != nil {
+		logger.Error(ctx, "Failed to create PII Guardrail Plugin", "error", err)
+	}
+
+	plugins := []*plugin.Plugin{a2uiPlugin}
+	if piiPlugin != nil {
+		plugins = append(plugins, piiPlugin)
 	}
 
 	config := &launcher.Config{
 		AgentLoader:    agent.NewSingleLoader(reconAgent),
 		SessionService: sessionService,
 		PluginConfig: runner.PluginConfig{
-			Plugins: []*plugin.Plugin{a2uiPlugin},
+			Plugins: plugins,
 		},
 	}
 

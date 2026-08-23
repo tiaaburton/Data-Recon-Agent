@@ -19,12 +19,16 @@ var (
 	rawJSONCodeBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*\\{\\s*\"version\":\\s*\"v0\\.9\".*?\\}\\s*```")
 )
 
-// CleanRawJSONText removes raw A2UI JSON code blocks from conversational text parts.
+// CleanRawJSONText removes raw A2UI JSON code blocks from conversational text parts
+// while strictly preserving valid <a2a_datapart_json> wire protocol blocks.
 func CleanRawJSONText(text string) string {
 	if text == "" {
 		return ""
 	}
-	if !strings.Contains(text, "\"version\": \"v0.9\"") && !strings.Contains(text, "\"createSurface\"") {
+	if strings.Contains(text, "<a2a_datapart_json>") {
+		return text
+	}
+	if !strings.Contains(text, "\"version\": \"v0.9\"") && !strings.Contains(text, "\"createSurface\"") && !strings.Contains(text, "\"beginRendering\"") {
 		return text
 	}
 
@@ -34,7 +38,7 @@ func CleanRawJSONText(text string) string {
 }
 
 // NewA2UIPartsPlugin returns an ADK plugin that emits native A2A DataParts (<a2a_datapart_json>)
-// so that Gemini Enterprise natively renders interactive A2UI component cards in the chat UI.
+// inside text parts so that Gemini Enterprise natively renders interactive A2UI component cards in the chat UI.
 func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 	return plugin.New(plugin.Config{
 		Name: "a2ui_parts_plugin",
@@ -43,7 +47,7 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 				return nil, nil
 			}
 
-			newParts := make([]*genai.Part, 0, len(event.Content.Parts)+2)
+			newParts := make([]*genai.Part, 0, len(event.Content.Parts)+4)
 			modified := false
 
 			for _, part := range event.Content.Parts {
@@ -92,17 +96,14 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							messages = []any{m}
 						}
 
+						// Emit each A2UI wire message inside <a2a_datapart_json> text block
 						for _, msg := range messages {
 							msgBytes, err := json.Marshal(msg)
 							if err == nil && len(msgBytes) > 0 {
 								wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
-								dataPart := &genai.Part{
-									InlineData: &genai.Blob{
-										MIMEType: A2UIMimeType,
-										Data:     []byte(wrappedData),
-									},
-								}
-								newParts = append(newParts, dataPart)
+								newParts = append(newParts, &genai.Part{
+									Text: wrappedData,
+								})
 								modified = true
 							}
 						}
@@ -114,7 +115,7 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							}
 						}
 						sanitizedResp["status"] = "success"
-						sanitizedResp["a2ui_status"] = "A2UI_SURFACE_RENDERED"
+						sanitizedResp["a2ui_status"] = "A2UI_SURFACE_SYNTHESIZED"
 						part.FunctionResponse.Response = sanitizedResp
 						modified = true
 					}

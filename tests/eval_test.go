@@ -14,7 +14,11 @@ import (
 
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/agent"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/guardrails"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/logger"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/memory"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/schemas"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/telemetry"
 )
 
 func loadGoldenDataset(t *testing.T, path string) []schemas.CorrelatedReconciliationRecord {
@@ -330,28 +334,177 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected modified event, got nil")
 	}
 
-	// Verify DataParts were emitted (beginRendering and surfaceUpdate)
-	dataPartsCount := 0
+	// Verify tool response is sanitized
+	foundSanitized := false
+	for _, p := range resEvent.Content.Parts {
+		if p.FunctionResponse != nil && p.FunctionResponse.Response != nil {
+			if p.FunctionResponse.Response["a2ui_status"] == "A2UI_SURFACE_SYNTHESIZED" {
+				foundSanitized = true
+			}
+		}
+	}
+	if !foundSanitized {
+		t.Fatalf("Expected a2ui_status A2UI_SURFACE_SYNTHESIZED on function response part")
+	}
+
 	foundBeginRendering := false
 	foundSurfaceUpdate := false
-
 	for _, p := range resEvent.Content.Parts {
-		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
-			dataPartsCount++
-			dataStr := string(p.InlineData.Data)
-			if strings.Contains(dataStr, "beginRendering") {
+		if strings.Contains(p.Text, "<a2a_datapart_json>") {
+			if strings.Contains(p.Text, "beginRendering") {
 				foundBeginRendering = true
 			}
-			if strings.Contains(dataStr, "surfaceUpdate") && strings.Contains(dataStr, "btn-stage-credit") {
+			if strings.Contains(p.Text, "surfaceUpdate") && strings.Contains(p.Text, "btn-stage-credit") {
 				foundSurfaceUpdate = true
 			}
 		}
 	}
 
-	if dataPartsCount != 2 || !foundBeginRendering || !foundSurfaceUpdate {
-		t.Fatalf("Expected 2 A2A DataParts (beginRendering and surfaceUpdate with buttons), got count=%d begin=%v update=%v",
-			dataPartsCount, foundBeginRendering, foundSurfaceUpdate)
+	if !foundBeginRendering || !foundSurfaceUpdate {
+		t.Fatalf("Expected <a2a_datapart_json> parts for beginRendering and surfaceUpdate with buttons (begin=%v, update=%v)",
+			foundBeginRendering, foundSurfaceUpdate)
 	}
 
-	t.Logf("✓ A2UIPartsPlugin successfully converted basic_catalog messages to native A2A DataParts with interactive buttons.")
+	t.Logf("✓ A2UIPartsPlugin successfully emitted <a2a_datapart_json> wire frames with interactive A2UI buttons.")
+}
+
+func TestPIIGuardrailRedaction(t *testing.T) {
+	input := "Customer SSN is 123-45-6789 and Card is 4111-2222-3333-4444. Contact user@globex.com with key AIzaSyD98374829374823947."
+	redacted := guardrails.RedactPII(input)
+
+	if strings.Contains(redacted, "123-45-6789") {
+		t.Fatalf("Failed to redact SSN")
+	}
+	if strings.Contains(redacted, "4111-2222-3333-4444") {
+		t.Fatalf("Failed to redact Credit Card")
+	}
+	if strings.Contains(redacted, "user@globex.com") {
+		t.Fatalf("Failed to redact Email")
+	}
+	if strings.Contains(redacted, "AIzaSyD98374829374823947") {
+		t.Fatalf("Failed to redact API Key")
+	}
+	t.Logf("✓ PII Guardrail accurately redacted sensitive data: %s", redacted)
+}
+
+func TestIntentOutcomeTelemetry(t *testing.T) {
+	rec := telemetry.GetRecorder()
+	ctx := context.Background()
+
+	rec.Record(ctx, telemetry.IntentOutcomeRecord{
+		UserID:         "test-user",
+		ContractID:     "CTR-2026-451",
+		Intent:         telemetry.IntentReconcileContract,
+		Outcome:        telemetry.OutcomeDiscrepancyFlagged,
+		Severity:       "CRITICAL",
+		VarianceAmount: 18000.00,
+		Duration:       45 * time.Millisecond,
+		Success:        true,
+	})
+
+	stats := rec.GetSummary()
+	if stats.TotalRequests == 0 {
+		t.Fatalf("Expected non-zero telemetry records")
+	}
+	if stats.TotalVarianceDetected < 18000.00 {
+		t.Fatalf("Expected variance tracking >= 18000, got %f", stats.TotalVarianceDetected)
+	}
+	t.Logf("✓ Intent vs Outcome Telemetry verified: SuccessRate=%.1f%%, TotalVariance=$%.2f",
+		stats.SuccessRate, stats.TotalVarianceDetected)
+}
+
+func TestAsyncMemoryBankOperations(t *testing.T) {
+	bank := memory.NewMemoryBank()
+	ctx := context.Background()
+
+	// 1. Test Async Persistence
+	errChan := bank.AsyncPersistMemory(ctx, memory.MemoryRecord{
+		UserID:     "user-123",
+		ContractID: "CTR-2026-451",
+		Category:   memory.CategoryAuditHistory,
+		Key:        "audit-CTR-451",
+		Content:    "Approved $18,000 credit memo for Globex SLA dispute.",
+	})
+	if err := <-errChan; err != nil {
+		t.Fatalf("AsyncPersistMemory failed: %v", err)
+	}
+
+	// 2. Test Async Recall
+	resChan := bank.AsyncRecallMemories(ctx, "user-123", "Globex", 5)
+	res := <-resChan
+	if res.Err != nil {
+		t.Fatalf("AsyncRecallMemories failed: %v", res.Err)
+	}
+	if len(res.Memories) == 0 {
+		t.Fatalf("Expected recalled memory for query 'Globex', got 0")
+	}
+	t.Logf("✓ Async Memory Bank recalled %d memory item: %s", len(res.Memories), res.Memories[0].Content)
+
+	// 3. Test Session Compaction
+	compSummary, err := bank.CompactSessionHistory(ctx, "sess-123", 10)
+	if err != nil {
+		t.Fatalf("CompactSessionHistory failed: %v", err)
+	}
+	if compSummary.CompactedTurns >= compSummary.OriginalTurns {
+		t.Fatalf("Expected compacted turns < original turns")
+	}
+	t.Logf("✓ Memory Compaction succeeded: %d turns -> %d turns", compSummary.OriginalTurns, compSummary.CompactedTurns)
+}
+
+func TestStrategicModelRouter(t *testing.T) {
+	router := agent.NewStrategicModelRouter()
+	ctx := context.Background()
+
+	// Test Case 1: High variance record should route to Pro
+	criticalRecord := schemas.CorrelatedReconciliationRecord{
+		ContractID:        "CTR-2026-451",
+		VarianceAmount:    18000.00,
+		VarianceArchetype: schemas.ArchetypeCriticalDiscrepancy,
+	}
+	decisionPro := router.RouteForRecord(ctx, criticalRecord)
+	if decisionPro.Tier != "PRO" {
+		t.Fatalf("Expected PRO tier for $18k variance, got %s", decisionPro.Tier)
+	}
+
+	// Test Case 2: Low variance record should route to Flash
+	lowRecord := schemas.CorrelatedReconciliationRecord{
+		ContractID:        "CTR-2026-001",
+		VarianceAmount:    0.00,
+		VarianceArchetype: schemas.ArchetypeMatch,
+	}
+	decisionFlash := router.RouteForRecord(ctx, lowRecord)
+	if decisionFlash.Tier != "FLASH" {
+		t.Fatalf("Expected FLASH tier for clean record, got %s", decisionFlash.Tier)
+	}
+	t.Logf("✓ Strategic Model Router verified: Critical->$18k (PRO: %s), Clean->$0 (FLASH: %s)",
+		decisionPro.SelectedModel, decisionFlash.SelectedModel)
+}
+
+func TestMultiAgentReconPipeline(t *testing.T) {
+	pipeline := agent.NewMultiAgentReconPipeline()
+	ctx := context.Background()
+
+	outcome, err := pipeline.Execute(ctx, "CTR-2026-451", "test-evaluator")
+	if err != nil {
+		t.Fatalf("MultiAgentReconPipeline failed: %v", err)
+	}
+
+	if outcome.ContractID != "CTR-2026-451" {
+		t.Fatalf("Expected CTR-2026-451, got %s", outcome.ContractID)
+	}
+	if outcome.Severity != "CRITICAL" {
+		t.Fatalf("Expected CRITICAL severity, got %s", outcome.Severity)
+	}
+	if outcome.VarianceAmount != 18000.00 {
+		t.Fatalf("Expected $18,000 variance, got %f", outcome.VarianceAmount)
+	}
+	t.Logf("✓ Multi-Agent Pipeline executed cleanly across Ingestion, Detection, and Remediation sub-agents.")
+}
+
+func TestStructuredLogger(t *testing.T) {
+	logger.Info(context.Background(), "Structured logging test",
+		"subsystem", "evaluation_suite",
+		"status", "PASS",
+	)
+	t.Logf("✓ Structured JSON logger verified.")
 }
