@@ -96,13 +96,16 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							messages = []any{m}
 						}
 
-						// Emit each A2UI wire message inside <a2a_datapart_json> text block
+						// Create native A2A DataPart GenAI parts with <a2a_datapart_json> wrapper
 						for _, msg := range messages {
 							msgBytes, err := json.Marshal(msg)
 							if err == nil && len(msgBytes) > 0 {
 								wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
 								newParts = append(newParts, &genai.Part{
-									Text: wrappedData,
+									InlineData: &genai.Blob{
+										MIMEType: A2UIMimeType,
+										Data:     []byte(wrappedData),
+									},
 								})
 								modified = true
 							}

@@ -473,7 +473,7 @@ func BuildBasicCatalogDiscrepancyCard(params DiscrepancyCardParams) []map[string
 			"beginRendering": map[string]any{
 				"surfaceId": surfaceID,
 				"root":      "root",
-				"catalogId": "basic_catalog",
+				"catalogId": "https://a2ui.org/specification/v0_8/standard_catalog_definition.json",
 			},
 		},
 		{
