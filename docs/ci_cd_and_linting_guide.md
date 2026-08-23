@@ -27,28 +27,23 @@ make ci
 
 ---
 
-## 2. Git Pre-Commit Hooks: `.pre-commit-config.yaml`
+## 2. Native Go Git Pre-Commit Hooks (Zero Python Required)
 
-Pre-commit hooks validate code quality, hygiene, and security before commits are accepted.
+Git pre-commit hooks are natively managed via Git's built-in `core.hooksPath` pointing to [**`.githooks/pre-commit`**](file:///usr/local/google/home/tiaburton/Documents/Users/tiaburton/Documents/dev_projects/Data-Recon-Agent/.githooks/pre-commit), requiring **zero Python (`pip`) dependencies**:
 
-### Hook Breakdown:
-1. **Repository Hygiene**:
-   * `trailing-whitespace`: Strips trailing whitespace (skips `.json` data fixtures).
-   * `end-of-file-fixer`: Ensures clean newline termination.
-   * `check-yaml` & `check-json`: Validates schema syntax.
-   * `check-added-large-files`: Prevents accidental binary blobs (`maxkb=2048`).
-   * `detect-private-key`: Blocks accidental secret leaks.
-2. **Go Automation**:
-   * `go-fmt`, `go-imports`, `go-vet`, `go-mod-tidy`, and `go-unit-tests`.
-3. **Terraform Validation**:
-   * `terraform_fmt`, `terraform_validate`.
+### Hook Validations:
+1. **Go Auto-Formatting**: Detects unformatted staged Go files via `gofmt -l`, auto-formats with `gofmt -s -w`, and re-stages them.
+2. **Go Vetting**: Runs `go vet ./cmd/... ./pkg/... ./tests/...` for correctness and struct tag consistency.
+3. **Static Analysis**: Runs `golangci-lint` if present in `$PATH`.
+4. **Automated Unit & Golden Benchmarks**: Runs fast test execution (`go test -short ./tests/... ./pkg/...`).
+5. **Terraform Formatting Check**: Runs `terraform fmt -check` if staged.
 
-### Installation & Usage
+### One-Command Setup & Manual Execution
 ```bash
-# Install git hooks into .git/hooks/pre-commit
+# Point git hooks directly to .githooks/ (No pip or package managers needed)
 make setup-hooks
 
-# Run pre-commit checks manually across all files
+# Run pre-commit checks manually on demand
 make pre-commit
 ```
 
