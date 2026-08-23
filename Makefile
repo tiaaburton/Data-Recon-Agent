@@ -245,4 +245,15 @@ register-endpoints: ## Register Salesforce, ServiceNow, and Vertex AI endpoints 
 		--endpoint-spec-type=no-spec \
 		--interfaces="url=https://dev410998.service-now.com,protocolBinding=https" || true
 
+.PHONY: tf-init tf-plan tf-apply
+tf-init: ## Initialize Terraform providers and backend in terraform/
+	@cd terraform && terraform init
+
+tf-plan: ## Run Terraform plan for Agent Gateway & GCP infrastructure
+	@cd terraform && terraform plan -var="project_id=$(PROJECT_ID)" -var="region=$(REGION)" -var="agent_engine_id=$(AGENT_ENGINE_ID)"
+
+tf-apply: ## Apply Terraform infrastructure for Agent Gateway & GCP dependencies
+	@cd terraform && terraform apply -auto-approve -var="project_id=$(PROJECT_ID)" -var="region=$(REGION)" -var="agent_engine_id=$(AGENT_ENGINE_ID)"
+
+
 
