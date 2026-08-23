@@ -1,6 +1,8 @@
 package a2ui
 
 import (
+	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -60,24 +62,59 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 				// Check function responses for A2UI payload envelopes
 				if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
 					respMap := part.FunctionResponse.Response
-					if _, hasJSON := respMap["a2ui_json"]; hasJSON {
+					var rawPayload any
+					if p, exists := respMap["validated_a2ui_json"]; exists {
+						rawPayload = p
+					} else if p, exists := respMap["a2ui_json"]; exists {
+						rawPayload = p
+					} else if p, exists := respMap["a2ui_payload"]; exists {
+						rawPayload = p
+					}
+
+					if rawPayload != nil {
+						var messages []any
+						if s, isStr := rawPayload.(string); isStr {
+							var parsed any
+							if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+								if list, isList := parsed.([]any); isList {
+									messages = list
+								} else if m, isMap := parsed.(map[string]any); isMap {
+									messages = []any{m}
+								}
+							}
+						} else if list, isList := rawPayload.([]any); isList {
+							messages = list
+						} else if listMap, isListMap := rawPayload.([]map[string]any); isListMap {
+							for _, m := range listMap {
+								messages = append(messages, m)
+							}
+						} else if m, isMap := rawPayload.(map[string]any); isMap {
+							messages = []any{m}
+						}
+
+						for _, msg := range messages {
+							msgBytes, err := json.Marshal(msg)
+							if err == nil && len(msgBytes) > 0 {
+								wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
+								dataPart := &genai.Part{
+									InlineData: &genai.Blob{
+										MIMEType: A2UIMimeType,
+										Data:     []byte(wrappedData),
+									},
+								}
+								newParts = append(newParts, dataPart)
+								modified = true
+							}
+						}
+
 						sanitizedResp := make(map[string]any)
 						for k, v := range respMap {
-							if k != "a2ui_json" && k != "a2ui_payload" {
+							if k != "a2ui_json" && k != "a2ui_payload" && k != "validated_a2ui_json" {
 								sanitizedResp[k] = v
 							}
 						}
-						sanitizedResp["a2ui_status"] = "SYNTHESIZED_INTERACTIVE_CARD"
-						part.FunctionResponse.Response = sanitizedResp
-						modified = true
-					} else if _, hasPayload := respMap["a2ui_payload"]; hasPayload {
-						sanitizedResp := make(map[string]any)
-						for k, v := range respMap {
-							if k != "a2ui_json" && k != "a2ui_payload" {
-								sanitizedResp[k] = v
-							}
-						}
-						sanitizedResp["a2ui_status"] = "SYNTHESIZED_INTERACTIVE_CARD"
+						sanitizedResp["status"] = "success"
+						sanitizedResp["a2ui_status"] = "A2UI_SURFACE_RENDERED"
 						part.FunctionResponse.Response = sanitizedResp
 						modified = true
 					}

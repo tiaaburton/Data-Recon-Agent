@@ -109,7 +109,7 @@ func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (Rec
 		recommendation = "Apply standard enterprise tax/FX tolerance rule."
 	}
 
-	envelope := a2ui.BuildDiscrepancyEnvelope(a2ui.DiscrepancyCardParams{
+	cardMessages := a2ui.BuildBasicCatalogDiscrepancyCard(a2ui.DiscrepancyCardParams{
 		ContractID:       record.ContractID,
 		AccountName:      record.AccountName,
 		ServiceNowINC:    "INC0010042",
@@ -122,7 +122,7 @@ func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (Rec
 		ResolutionAction: "stage_salesforce_billing_adjustment",
 	})
 
-	bytes, _ := json.MarshalIndent(envelope, "", "  ")
+	bytes, _ := json.Marshal(cardMessages)
 
 	return ReconcileContractResult{
 		ContractID:       record.ContractID,

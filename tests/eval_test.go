@@ -281,6 +281,19 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Failed to create A2UI plugin: %v", err)
 	}
 
+	cardMessages := a2ui.BuildBasicCatalogDiscrepancyCard(a2ui.DiscrepancyCardParams{
+		ContractID:       "CTR-2026-451",
+		AccountName:      "Globex Logistics Corporation",
+		ServiceNowINC:    "INC0010042",
+		BilledAmount:     115000.00,
+		AgreedCap:        97000.00,
+		VarianceAmount:   18000.00,
+		Severity:         "CRITICAL",
+		DiscrepancyCause: "Salesforce invoice exceeds spend cap.",
+		Recommendation:   "Stage -$18,000.00 billing adjustment.",
+	})
+	cardBytes, _ := json.Marshal(cardMessages)
+
 	testEvent := &session.Event{
 		LLMResponse: model.LLMResponse{
 			Content: &genai.Content{
@@ -291,12 +304,12 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 							Name: "reconcile_contract",
 							Response: map[string]any{
 								"contract_id": "CTR-2026-451",
-								"a2ui_json":   `{"version":"v0.9","createSurface":{"surfaceId":"surface-CTR-451"}}`,
+								"a2ui_json":   string(cardBytes),
 							},
 						},
 					},
 					{
-						Text: "Here is the summary:\n```json\n{\n  \"version\": \"v0.9\",\n  \"createSurface\": {}\n}\n```",
+						Text: "Here is the summary:\n```json\n{\n  \"surfaceId\": \"recon-surface-CTR-2026-451\"\n}\n```",
 					},
 				},
 			},
@@ -317,15 +330,28 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected modified event, got nil")
 	}
 
-	// Verify tool response is sanitized and raw JSON block is stripped from text
-	if resEvent.Content.Parts[0].FunctionResponse.Response["a2ui_status"] != "SYNTHESIZED_INTERACTIVE_CARD" {
-		t.Fatalf("Expected a2ui_status SYNTHESIZED_INTERACTIVE_CARD, got: %v", resEvent.Content.Parts[0].FunctionResponse.Response["a2ui_status"])
-	}
+	// Verify DataParts were emitted (beginRendering and surfaceUpdate)
+	dataPartsCount := 0
+	foundBeginRendering := false
+	foundSurfaceUpdate := false
 
 	for _, p := range resEvent.Content.Parts {
-		if p.Text != "" && strings.Contains(p.Text, "\"version\": \"v0.9\"") {
-			t.Fatalf("Expected raw JSON to be stripped from text part, got: %s", p.Text)
+		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
+			dataPartsCount++
+			dataStr := string(p.InlineData.Data)
+			if strings.Contains(dataStr, "beginRendering") {
+				foundBeginRendering = true
+			}
+			if strings.Contains(dataStr, "surfaceUpdate") && strings.Contains(dataStr, "btn-stage-credit") {
+				foundSurfaceUpdate = true
+			}
 		}
 	}
-	t.Logf("✓ A2UIPartsPlugin successfully sanitized tool response and cleaned raw JSON blocks for Gemini Enterprise rendering.")
+
+	if dataPartsCount != 2 || !foundBeginRendering || !foundSurfaceUpdate {
+		t.Fatalf("Expected 2 A2A DataParts (beginRendering and surfaceUpdate with buttons), got count=%d begin=%v update=%v",
+			dataPartsCount, foundBeginRendering, foundSurfaceUpdate)
+	}
+
+	t.Logf("✓ A2UIPartsPlugin successfully converted basic_catalog messages to native A2A DataParts with interactive buttons.")
 }
