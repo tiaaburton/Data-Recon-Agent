@@ -178,13 +178,13 @@ lint: ## Run go vet and golangci-lint checks
 	fi
 	@echo -e "$(GREEN)Linting passed.$(RESET)"
 
-setup-hooks: ## Install native Go git pre-commit hooks (Zero Python dependencies)
-	@echo -e "$(CYAN)--> Configuring native Git hook path to .githooks/...$(RESET)"
+setup-hooks: ## Configure git pre-commit hook path (.githooks/)
+	@echo -e "$(CYAN)--> Configuring git hooks to .githooks/...$(RESET)"
 	@git config core.hooksPath .githooks
 	@chmod +x .githooks/pre-commit
-	@echo -e "$(GREEN)✓ Native Go pre-commit hook active (.githooks/pre-commit). Zero Python required!$(RESET)"
+	@echo -e "$(GREEN)✓ Git pre-commit hook configured (.githooks/pre-commit).$(RESET)"
 
-pre-commit: ## Run native Go pre-commit validations
+pre-commit: ## Run pre-commit validations
 	@bash .githooks/pre-commit
 
 ci: fmt lint test eval build ## Run full continuous integration pipeline locally

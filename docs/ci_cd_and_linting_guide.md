@@ -27,20 +27,20 @@ make ci
 
 ---
 
-## 2. Native Go Git Pre-Commit Hooks (Zero Python Required)
+## 2. Git Pre-Commit Hooks
 
-Git pre-commit hooks are natively managed via Git's built-in `core.hooksPath` pointing to [**`.githooks/pre-commit`**](file:///usr/local/google/home/tiaburton/Documents/Users/tiaburton/Documents/dev_projects/Data-Recon-Agent/.githooks/pre-commit), requiring **zero Python (`pip`) dependencies**:
+Git pre-commit hooks are managed via Git's built-in `core.hooksPath` pointing to [**`.githooks/pre-commit`**](file:///usr/local/google/home/tiaburton/Documents/Users/tiaburton/Documents/dev_projects/Data-Recon-Agent/.githooks/pre-commit):
 
 ### Hook Validations:
-1. **Go Auto-Formatting**: Detects unformatted staged Go files via `gofmt -l`, auto-formats with `gofmt -s -w`, and re-stages them.
-2. **Go Vetting**: Runs `go vet ./cmd/... ./pkg/... ./tests/...` for correctness and struct tag consistency.
+1. **Auto-Formatting**: Detects unformatted staged Go files via `gofmt -l`, auto-formats with `gofmt -s -w`, and re-stages them.
+2. **Vetting**: Runs `go vet ./cmd/... ./pkg/... ./tests/...` for correctness and struct tag consistency.
 3. **Static Analysis**: Runs `golangci-lint` if present in `$PATH`.
-4. **Automated Unit & Golden Benchmarks**: Runs fast test execution (`go test -short ./tests/... ./pkg/...`).
-5. **Terraform Formatting Check**: Runs `terraform fmt -check` if staged.
+4. **Unit & Evaluation Benchmarks**: Runs fast test execution (`go test -short ./tests/... ./pkg/...`).
+5. **Terraform Formatting**: Runs `terraform fmt -check` if staged.
 
-### One-Command Setup & Manual Execution
+### Setup & Manual Execution
 ```bash
-# Point git hooks directly to .githooks/ (No pip or package managers needed)
+# Point git hooks directly to .githooks/
 make setup-hooks
 
 # Run pre-commit checks manually on demand

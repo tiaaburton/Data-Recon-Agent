@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Pure Go Native Git Pre-Commit Hook (Zero Python Dependencies)
+# Git Pre-Commit Hook
 # ==============================================================================
 set -euo pipefail
 
@@ -9,7 +9,7 @@ GREEN='\033[32m'
 RED='\033[31m'
 RESET='\033[0m'
 
-echo -e "${CYAN}🔍 [pre-commit] Running native Go pre-commit validations...${RESET}"
+echo -e "${CYAN}🔍 [pre-commit] Running validations...${RESET}"
 
 # 1. Format Check for Staged Go Files
 echo -e "${CYAN}  • Checking gofmt on staged Go files...${RESET}"
@@ -48,4 +48,4 @@ if [ -n "$STAGED_TF_FILES" ] && command -v terraform >/dev/null 2>&1; then
   terraform -chdir=terraform fmt -check
 fi
 
-echo -e "${GREEN}✅ [pre-commit] All native Go pre-commit checks passed successfully!${RESET}"
+echo -e "${GREEN}✅ [pre-commit] All checks passed successfully!${RESET}"
