@@ -164,20 +164,36 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 				if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
 					if evs, ok := m["events"].([]any); ok && len(evs) > 0 {
 						if ev0, ok := evs[0].(map[string]any); ok {
-							if content, ok := ev0["content"].(map[string]any); ok {
-								existingParts, _ := content["parts"].([]any)
-								dataParts := make([]any, 0, len(pending)+len(existingParts))
-								for _, msg := range pending {
-									dataParts = append(dataParts, map[string]any{
-										"kind": "data",
-										"metadata": map[string]any{
-											"mimeType": a2ui.A2UIMimeType,
-										},
-										"data": msg,
-									})
+							dataParts := make([]any, 0, len(pending))
+							for _, msg := range pending {
+								dataParts = append(dataParts, map[string]any{
+									"kind": "data",
+									"metadata": map[string]any{
+										"mimeType": a2ui.A2UIMimeType,
+									},
+									"data": msg,
+								})
+							}
+
+							var targetContent map[string]any
+							if content, ok := ev0["content"].(map[string]any); ok && content != nil {
+								targetContent = content
+							} else if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {
+								if content, ok := llmResp["content"].(map[string]any); ok && content != nil {
+									targetContent = content
 								}
-								content["parts"] = append(dataParts, existingParts...)
-								content["role"] = "model"
+							}
+
+							if targetContent != nil {
+								existingParts, _ := targetContent["parts"].([]any)
+								targetContent["parts"] = append(dataParts, existingParts...)
+								targetContent["role"] = "model"
+								ev0["content"] = targetContent
+							} else {
+								ev0["content"] = map[string]any{
+									"role":  "model",
+									"parts": dataParts,
+								}
 							}
 						}
 					}

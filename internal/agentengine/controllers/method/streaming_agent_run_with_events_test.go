@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"iter"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,6 +30,7 @@ import (
 	"google.golang.org/adk/v2/cmd/launcher"
 	"google.golang.org/adk/v2/model"
 	"github.com/tiaaburton/Data-Recon-Agent/internal/agentengine/internal/models"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
 	"google.golang.org/adk/v2/session"
 )
 
@@ -353,5 +355,67 @@ func TestStreamingAgentRunWithEventsHandlerMetadata(t *testing.T) {
 		return k == "description"
 	})); diff != "" {
 		t.Errorf("Metadata() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
+	const (
+		appName           = "app"
+		userID            = "test-user@example.com"
+		externalSessionID = "projects/111111111111/locations/global/collections/default_collection/engines/test-engine/sessions/12345678901234567890"
+	)
+
+	a, err := llmagent.New(llmagent.Config{
+		Name:  "StreamAware",
+		Model: streamAwareLLM{},
+	})
+	if err != nil {
+		t.Fatalf("failed to create agent: %v", err)
+	}
+
+	config := &launcher.Config{
+		AgentLoader:    agent.NewSingleLoader(a),
+		SessionService: session.InMemoryService(),
+	}
+	h := NewStreamingAgentRunWithEventsHandler(config, appName, "streaming_agent_run_with_events", "async_stream")
+
+	// Store pending A2UI messages
+	testA2UIMsg := map[string]any{
+		"version": "v0.9",
+		"createSurface": map[string]any{
+			"surfaceId": "test-surface-1",
+			"catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json",
+		},
+	}
+	a2ui.StorePendingA2UIMessages("default", []any{testA2UIMsg})
+
+	requestJSON := `{"message":{"role":"user","parts":[{"text":"Reconcile CTR-2026-451"}]},"session_id":"` + externalSessionID + `","user_id":"` + userID + `"}`
+	payload, err := json.Marshal(models.StreamingAgentRunWithEventsRequest{
+		ClassMethod: "streaming_agent_run_with_events",
+		Input: models.StreamingAgentRunWithEventsInput{
+			RequestJSON: requestJSON,
+		},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() failed: %v", err)
+	}
+
+	w := newStringWriter()
+	if err := h.streamJSONL(t.Context(), w, payload); err != nil {
+		t.Fatalf("streamJSONL() failed: %v", err)
+	}
+
+	rawOutput := w.sb.String()
+	if !strings.Contains(rawOutput, `"kind":"data"`) {
+		t.Fatalf("expected raw output to contain '\"kind\":\"data\"', got:\n%s", rawOutput)
+	}
+	if !strings.Contains(rawOutput, `"mimeType":"application/json+a2ui"`) {
+		t.Fatalf("expected raw output to contain '\"mimeType\":\"application/json+a2ui\"', got:\n%s", rawOutput)
+	}
+	if !strings.Contains(rawOutput, `"createSurface"`) {
+		t.Fatalf("expected raw output to contain 'createSurface', got:\n%s", rawOutput)
+	}
+	if !strings.Contains(rawOutput, `"final response"`) {
+		t.Fatalf("expected raw output to contain 'final response', got:\n%s", rawOutput)
 	}
 }
