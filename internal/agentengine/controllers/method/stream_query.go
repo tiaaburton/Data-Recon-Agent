@@ -109,7 +109,7 @@ func (s *streamQueryHandler) streamJSONL(ctx context.Context, rw http.ResponseWr
 		if event == nil {
 			continue
 		}
-		if event.LLMResponse.Content == nil {
+		if event.Content == nil && event.LLMResponse.Content == nil {
 			continue
 		}
 

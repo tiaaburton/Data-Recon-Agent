@@ -347,18 +347,19 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 	foundCreateSurface := false
 	foundUpdateComponents := false
 	for _, p := range resEvent.Content.Parts {
-		if strings.Contains(p.Text, "<a2a_datapart_json>") {
-			if strings.Contains(p.Text, "createSurface") && strings.Contains(p.Text, "basic_catalog.json") {
+		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
+			dataStr := string(p.InlineData.Data)
+			if strings.Contains(dataStr, "createSurface") && strings.Contains(dataStr, "basic_catalog.json") {
 				foundCreateSurface = true
 			}
-			if strings.Contains(p.Text, "updateComponents") && strings.Contains(p.Text, "btn-stage-credit") {
+			if strings.Contains(dataStr, "updateComponents") && strings.Contains(dataStr, "btn-stage-credit") {
 				foundUpdateComponents = true
 			}
 		}
 	}
 
 	if !foundCreateSurface || !foundUpdateComponents {
-		t.Fatalf("Expected native A2A DataParts in Text parts for createSurface and updateComponents with buttons (create=%v, update=%v)",
+		t.Fatalf("Expected native A2A DataParts in InlineData for createSurface and updateComponents with buttons (create=%v, update=%v)",
 			foundCreateSurface, foundUpdateComponents)
 	}
 
