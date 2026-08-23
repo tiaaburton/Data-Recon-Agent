@@ -347,21 +347,18 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 	foundBeginRendering := false
 	foundSurfaceUpdate := false
 	for _, p := range resEvent.Content.Parts {
-		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
-			dataStr := string(p.InlineData.Data)
-			if strings.Contains(dataStr, "<a2a_datapart_json>") {
-				if strings.Contains(dataStr, "beginRendering") && strings.Contains(dataStr, "standard_catalog_definition.json") {
-					foundBeginRendering = true
-				}
-				if strings.Contains(dataStr, "surfaceUpdate") && strings.Contains(dataStr, "btn-stage-credit") {
-					foundSurfaceUpdate = true
-				}
+		if strings.Contains(p.Text, "<a2a_datapart_json>") {
+			if strings.Contains(p.Text, "beginRendering") && strings.Contains(p.Text, "standard_catalog_definition.json") {
+				foundBeginRendering = true
+			}
+			if strings.Contains(p.Text, "surfaceUpdate") && strings.Contains(p.Text, "btn-stage-credit") {
+				foundSurfaceUpdate = true
 			}
 		}
 	}
 
 	if !foundBeginRendering || !foundSurfaceUpdate {
-		t.Fatalf("Expected native InlineData A2A DataParts for beginRendering and surfaceUpdate with buttons (begin=%v, update=%v)",
+		t.Fatalf("Expected native A2A DataParts in Text parts for beginRendering and surfaceUpdate with buttons (begin=%v, update=%v)",
 			foundBeginRendering, foundSurfaceUpdate)
 	}
 

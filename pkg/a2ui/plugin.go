@@ -102,10 +102,7 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							if err == nil && len(msgBytes) > 0 {
 								wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
 								newParts = append(newParts, &genai.Part{
-									InlineData: &genai.Blob{
-										MIMEType: A2UIMimeType,
-										Data:     []byte(wrappedData),
-									},
+									Text: wrappedData,
 								})
 							}
 						}

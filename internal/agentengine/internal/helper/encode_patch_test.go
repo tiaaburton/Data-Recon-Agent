@@ -90,3 +90,62 @@ func TestNonByteSlicesAreStillArrays(t *testing.T) {
 		t.Errorf("[]string was mangled: %#v (%v)", m["names"], reflect.TypeOf(m["names"]))
 	}
 }
+
+// TestA2UIDataPartConvertsToNativeA2APart verifies that A2UI inline_data parts
+// are transformed into native A2A DataPart envelopes (kind: "data") so Discovery Engine
+// does not treat them as unsupported file attachments.
+func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
+	rawPayload := `<a2a_datapart_json>{"beginRendering":{"surfaceId":"test-surface","root":"root","catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}</a2a_datapart_json>`
+	content := &genai.Content{
+		Role: "model",
+		Parts: []*genai.Part{
+			{
+				InlineData: &genai.Blob{
+					MIMEType: "application/json+a2ui",
+					Data:     []byte(rawPayload),
+				},
+			},
+		},
+	}
+
+	got := ConvertSnake(content)
+	m, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any, got %T", got)
+	}
+
+	parts, ok := m["parts"].([]any)
+	if !ok || len(parts) != 1 {
+		t.Fatalf("expected 1 part, got: %#v", m["parts"])
+	}
+
+	part, ok := parts[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected part map, got: %T", parts[0])
+	}
+
+	// Must NOT contain inline_data (which GE treats as a file upload/attachment)
+	if _, hasInline := part["inline_data"]; hasInline {
+		t.Fatalf("part still contains inline_data! Gemini Enterprise will treat this as an unsupported file attachment")
+	}
+
+	// Must be kind: "data" with metadata and parsed JSON data object
+	if part["kind"] != "data" {
+		t.Fatalf("expected kind='data', got: %v", part["kind"])
+	}
+
+	metadata, ok := part["metadata"].(map[string]any)
+	if !ok || metadata["mimeType"] != "application/json+a2ui" {
+		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", part["metadata"])
+	}
+
+	dataObj, ok := part["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got: %T", part["data"])
+	}
+
+	beginRendering, ok := dataObj["beginRendering"].(map[string]any)
+	if !ok || beginRendering["surfaceId"] != "test-surface" {
+		t.Fatalf("expected beginRendering.surfaceId='test-surface', got: %#v", dataObj)
+	}
+}

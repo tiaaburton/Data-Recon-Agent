@@ -16,6 +16,7 @@ package helper
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -117,8 +118,37 @@ func convertSnake(path, indent string, o any) (any, error) {
 					m[newName] = val
 				}
 			}
-
 		}
+
+		// PATCH: Convert A2UI inline_data into native A2A DataPart (kind: data)
+		// so Gemini Enterprise's Discovery Engine renders interactive UI cards
+		// instead of treating it as an unsupported file attachment.
+		if inlineData, ok := m["inline_data"].(map[string]any); ok {
+			if mimeType, _ := inlineData["mime_type"].(string); mimeType == "application/json+a2ui" {
+				if rawData, ok := inlineData["data"].(string); ok {
+					decodedBytes, err := base64.StdEncoding.DecodeString(rawData)
+					payloadStr := string(decodedBytes)
+					if err != nil || len(decodedBytes) == 0 {
+						payloadStr = rawData
+					}
+					payloadStr = strings.TrimSpace(payloadStr)
+					payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
+					payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
+					payloadStr = strings.TrimSpace(payloadStr)
+
+					var dataObj any
+					if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
+						delete(m, "inline_data")
+						m["kind"] = "data"
+						m["metadata"] = map[string]any{
+							"mimeType": "application/json+a2ui",
+						}
+						m["data"] = dataObj
+					}
+				}
+			}
+		}
+
 		return m, nil
 	case reflect.Slice:
 		// PATCH (see package comment): a []byte reaches the generic branch
