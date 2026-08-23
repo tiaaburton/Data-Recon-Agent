@@ -2,6 +2,7 @@ package a2ui
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -23,7 +24,29 @@ var (
 	pendingMap = make(map[string][]any)
 )
 
-// CleanRawJSONText removes raw A2UI JSON code blocks and leaked datapart tags from conversational text parts.
+// BuildA2UIDataPart creates a native A2A DataPart map for Gemini Enterprise / Discovery Engine.
+func BuildA2UIDataPart(a2uiMessage any) map[string]any {
+	return map[string]any{
+		"kind": "data",
+		"metadata": map[string]any{
+			"mimeType": A2UIMimeType,
+		},
+		"data": a2uiMessage,
+	}
+}
+
+// WrapA2UIDataPartText wraps an A2UI message inside the official A2A DataPart envelope and sentinel tags
+// for legacy text-fallback rendering.
+func WrapA2UIDataPartText(a2uiMessage any) string {
+	dataPartEnvelope := BuildA2UIDataPart(a2uiMessage)
+	jsonBytes, err := json.Marshal(dataPartEnvelope)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(jsonBytes))
+}
+
+// CleanRawJSONText removes raw A2UI JSON code blocks and legacy <a2a_datapart_json> tags from conversational text parts.
 func CleanRawJSONText(text string) string {
 	if text == "" {
 		return ""

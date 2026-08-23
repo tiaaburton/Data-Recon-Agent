@@ -16,7 +16,6 @@ package method
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"iter"
@@ -132,21 +131,16 @@ func (s *streamQueryHandler) streamJSONL(ctx context.Context, rw http.ResponseWr
 						existingParts, _ := content["parts"].([]any)
 						dataParts := make([]any, 0, len(pending))
 						for _, msg := range pending {
-							msgBytes, _ := json.Marshal(msg)
-							payloadWithTag := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
-							dataParts = append(dataParts, map[string]any{
-								"inline_data": map[string]any{
-									"mime_type": a2ui.A2UIMimeType,
-									"data":      base64.StdEncoding.EncodeToString([]byte(payloadWithTag)),
-								},
-							})
+							dataParts = append(dataParts, a2ui.BuildA2UIDataPart(msg))
 						}
 						content["parts"] = append(existingParts, dataParts...)
 						content["role"] = "model"
 					}
 				}
 			}
-			err = json.NewEncoder(rw).Encode(m)
+			enc := json.NewEncoder(rw)
+			enc.SetEscapeHTML(false)
+			err = enc.Encode(m)
 		} else {
 			err = helper.EmitJSON(rw, *event)
 		}

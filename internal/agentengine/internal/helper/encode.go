@@ -16,6 +16,7 @@ package helper
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -115,6 +116,67 @@ func convertSnake(path, indent string, o any) (any, error) {
 				val := convertValue(fv)
 				if val != 0 || !omitZero {
 					m[newName] = val
+				}
+			}
+		}
+
+		// Convert A2UI inline_data or tagged text into native A2A DataPart (kind: data)
+		// so Gemini Enterprise renders interactive UI cards instead of treating it as an unsupported file attachment or text dump.
+		if inlineData, ok := m["inline_data"].(map[string]any); ok {
+			mimeType, _ := inlineData["mime_type"].(string)
+			if rawData, ok := inlineData["data"].(string); ok {
+				decodedBytes, err := base64.StdEncoding.DecodeString(rawData)
+				payloadStr := string(decodedBytes)
+				if err != nil || len(decodedBytes) == 0 {
+					payloadStr = rawData
+				}
+				if mimeType == "application/json+a2ui" || strings.Contains(payloadStr, "<a2a_datapart_json>") {
+					payloadStr = strings.TrimSpace(payloadStr)
+					payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
+					payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
+					payloadStr = strings.TrimSpace(payloadStr)
+
+					var dataObj any
+					if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
+						delete(m, "inline_data")
+						m["kind"] = "data"
+						m["metadata"] = map[string]any{
+							"mimeType": "application/json+a2ui",
+						}
+						// If dataObj is already wrapped in {"kind":"data", "data": ...}, unwrap it
+						if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
+							if innerData, hasData := envelopeMap["data"]; hasData {
+								m["data"] = innerData
+							} else {
+								m["data"] = dataObj
+							}
+						} else {
+							m["data"] = dataObj
+						}
+					}
+				}
+			}
+		} else if textVal, ok := m["text"].(string); ok && strings.Contains(textVal, "<a2a_datapart_json>") {
+			payloadStr := strings.TrimSpace(textVal)
+			payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
+			payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
+			payloadStr = strings.TrimSpace(payloadStr)
+
+			var dataObj any
+			if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
+				delete(m, "text")
+				m["kind"] = "data"
+				m["metadata"] = map[string]any{
+					"mimeType": "application/json+a2ui",
+				}
+				if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
+					if innerData, hasData := envelopeMap["data"]; hasData {
+						m["data"] = innerData
+					} else {
+						m["data"] = dataObj
+					}
+				} else {
+					m["data"] = dataObj
 				}
 			}
 		}

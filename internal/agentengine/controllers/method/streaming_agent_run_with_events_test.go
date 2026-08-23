@@ -406,11 +406,17 @@ func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
 	}
 
 	rawOutput := w.sb.String()
-	if !strings.Contains(rawOutput, `"inline_data"`) {
-		t.Fatalf("expected raw output to contain '\"inline_data\"', got:\n%s", rawOutput)
+	if strings.Contains(rawOutput, `<a2a_datapart_json>`) {
+		t.Fatalf("expected raw output NOT to contain '<a2a_datapart_json>', got:\n%s", rawOutput)
 	}
-	if !strings.Contains(rawOutput, `"mime_type":"application/json+a2ui"`) {
-		t.Fatalf("expected raw output to contain '\"mime_type\":\"application/json+a2ui\"', got:\n%s", rawOutput)
+	if !strings.Contains(rawOutput, `"kind":"data"`) {
+		t.Fatalf("expected raw output to contain '\"kind\":\"data\"', got:\n%s", rawOutput)
+	}
+	if !strings.Contains(rawOutput, `"mimeType":"application/json+a2ui"`) {
+		t.Fatalf("expected raw output to contain '\"mimeType\":\"application/json+a2ui\"', got:\n%s", rawOutput)
+	}
+	if !strings.Contains(rawOutput, `beginRendering`) {
+		t.Fatalf("expected raw output to contain 'beginRendering', got:\n%s", rawOutput)
 	}
 	if !strings.Contains(rawOutput, `"final response"`) {
 		t.Fatalf("expected raw output to contain 'final response', got:\n%s", rawOutput)
