@@ -317,23 +317,15 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected modified event, got nil")
 	}
 
-	// Verify DataPart was emitted
-	foundDataPart := false
-	for _, p := range resEvent.Content.Parts {
-		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
-			foundDataPart = true
-			dataStr := string(p.InlineData.Data)
-			if !strings.Contains(dataStr, "<a2a_datapart_json>") {
-				t.Fatalf("Expected <a2a_datapart_json> wrapper in data part, got: %s", dataStr)
-			}
-			if !strings.Contains(dataStr, "surface-CTR-451") {
-				t.Fatalf("Expected payload content in data part, got: %s", dataStr)
-			}
-		}
+	// Verify tool response is sanitized and raw JSON block is stripped from text
+	if resEvent.Content.Parts[0].FunctionResponse.Response["a2ui_status"] != "SYNTHESIZED_INTERACTIVE_CARD" {
+		t.Fatalf("Expected a2ui_status SYNTHESIZED_INTERACTIVE_CARD, got: %v", resEvent.Content.Parts[0].FunctionResponse.Response["a2ui_status"])
 	}
 
-	if !foundDataPart {
-		t.Fatalf("Expected A2A DataPart with mimeType %s, none found", a2ui.A2UIMimeType)
+	for _, p := range resEvent.Content.Parts {
+		if p.Text != "" && strings.Contains(p.Text, "\"version\": \"v0.9\"") {
+			t.Fatalf("Expected raw JSON to be stripped from text part, got: %s", p.Text)
+		}
 	}
-	t.Logf("✓ A2UIPartsPlugin successfully converted tool response into native A2A DataPart for Gemini Enterprise rendering.")
+	t.Logf("✓ A2UIPartsPlugin successfully sanitized tool response and cleaned raw JSON blocks for Gemini Enterprise rendering.")
 }

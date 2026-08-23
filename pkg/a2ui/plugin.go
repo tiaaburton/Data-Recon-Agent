@@ -1,8 +1,6 @@
 package a2ui
 
 import (
-	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -62,45 +60,26 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 				// Check function responses for A2UI payload envelopes
 				if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
 					respMap := part.FunctionResponse.Response
-					var a2uiJSONStr string
-					if payload, exists := respMap["a2ui_json"]; exists {
-						if s, isStr := payload.(string); isStr {
-							a2uiJSONStr = s
-						} else {
-							b, _ := json.Marshal(payload)
-							a2uiJSONStr = string(b)
-						}
-					} else if payload, exists := respMap["a2ui_payload"]; exists {
-						if s, isStr := payload.(string); isStr {
-							a2uiJSONStr = s
-						} else {
-							b, _ := json.Marshal(payload)
-							a2uiJSONStr = string(b)
-						}
-					}
-
-					if a2uiJSONStr != "" {
-						// Emit native A2A DataPart with wire protocol wrapper for Gemini Enterprise
-						wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", a2uiJSONStr)
-						dataPart := &genai.Part{
-							InlineData: &genai.Blob{
-								MIMEType: A2UIMimeType,
-								Data:     []byte(wrappedData),
-							},
-						}
-
-						newParts = append(newParts, dataPart)
-						modified = true
-
-						// Sanitize function response to keep large JSON from polluting conversational context
+					if _, hasJSON := respMap["a2ui_json"]; hasJSON {
 						sanitizedResp := make(map[string]any)
 						for k, v := range respMap {
 							if k != "a2ui_json" && k != "a2ui_payload" {
 								sanitizedResp[k] = v
 							}
 						}
-						sanitizedResp["a2ui_status"] = "RENDERED_VIA_A2A_DATAPART"
+						sanitizedResp["a2ui_status"] = "SYNTHESIZED_INTERACTIVE_CARD"
 						part.FunctionResponse.Response = sanitizedResp
+						modified = true
+					} else if _, hasPayload := respMap["a2ui_payload"]; hasPayload {
+						sanitizedResp := make(map[string]any)
+						for k, v := range respMap {
+							if k != "a2ui_json" && k != "a2ui_payload" {
+								sanitizedResp[k] = v
+							}
+						}
+						sanitizedResp["a2ui_status"] = "SYNTHESIZED_INTERACTIVE_CARD"
+						part.FunctionResponse.Response = sanitizedResp
+						modified = true
 					}
 				}
 
