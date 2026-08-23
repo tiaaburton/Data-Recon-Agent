@@ -381,10 +381,10 @@ func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
 
 	// Store pending A2UI messages
 	testA2UIMsg := map[string]any{
-		"beginRendering": map[string]any{
+		"version": "v0.9",
+		"createSurface": map[string]any{
 			"surfaceId": "test-surface-1",
-			"root":      "root",
-			"catalogId": "https://a2ui.org/specification/v0_8/standard_catalog_definition.json",
+			"catalogId": "https://a2ui.org/specification/v0_9/standard_catalog_definition.json",
 		},
 	}
 	a2ui.StorePendingA2UIMessages("default", []any{testA2UIMsg})
@@ -415,8 +415,8 @@ func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
 	if !strings.Contains(rawOutput, `"mimeType":"application/json+a2ui"`) {
 		t.Fatalf("expected raw output to contain '\"mimeType\":\"application/json+a2ui\"', got:\n%s", rawOutput)
 	}
-	if !strings.Contains(rawOutput, `beginRendering`) {
-		t.Fatalf("expected raw output to contain 'beginRendering', got:\n%s", rawOutput)
+	if !strings.Contains(rawOutput, `createSurface`) {
+		t.Fatalf("expected raw output to contain 'createSurface', got:\n%s", rawOutput)
 	}
 	if !strings.Contains(rawOutput, `"final response"`) {
 		t.Fatalf("expected raw output to contain 'final response', got:\n%s", rawOutput)

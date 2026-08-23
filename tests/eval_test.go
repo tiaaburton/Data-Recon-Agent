@@ -349,22 +349,22 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected 2 captured A2UI messages in pending store, got %d", len(pending))
 	}
 
-	foundBeginRendering := false
-	foundSurfaceUpdate := false
+	foundCreateSurface := false
+	foundUpdateComponents := false
 	for _, msg := range pending {
 		msgBytes, _ := json.Marshal(msg)
 		dataStr := string(msgBytes)
-		if strings.Contains(dataStr, "beginRendering") && strings.Contains(dataStr, "standard_catalog_definition.json") {
-			foundBeginRendering = true
+		if strings.Contains(dataStr, "createSurface") && strings.Contains(dataStr, "standard_catalog_definition.json") {
+			foundCreateSurface = true
 		}
-		if strings.Contains(dataStr, "surfaceUpdate") && strings.Contains(dataStr, "btn-stage-credit") {
-			foundSurfaceUpdate = true
+		if strings.Contains(dataStr, "updateComponents") && strings.Contains(dataStr, "btn-stage-credit") {
+			foundUpdateComponents = true
 		}
 	}
 
-	if !foundBeginRendering || !foundSurfaceUpdate {
-		t.Fatalf("Expected captured A2UI messages for beginRendering and surfaceUpdate with buttons (begin=%v, update=%v)",
-			foundBeginRendering, foundSurfaceUpdate)
+	if !foundCreateSurface || !foundUpdateComponents {
+		t.Fatalf("Expected captured A2UI messages for createSurface and updateComponents with buttons (create=%v, update=%v)",
+			foundCreateSurface, foundUpdateComponents)
 	}
 
 	t.Logf("✓ A2UIPartsPlugin successfully captured A2UI envelopes and sanitized tool responses for native SSE streaming.")

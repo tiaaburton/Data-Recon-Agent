@@ -95,7 +95,7 @@ func TestNonByteSlicesAreStillArrays(t *testing.T) {
 // are transformed into native A2A DataPart envelopes (kind: "data") so Discovery Engine
 // does not treat them as unsupported file attachments.
 func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
-	rawPayload := `<a2a_datapart_json>{"beginRendering":{"surfaceId":"test-surface","root":"root","catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}</a2a_datapart_json>`
+	rawPayload := `<a2a_datapart_json>{"createSurface":{"surfaceId":"test-surface","catalogId":"https://a2ui.org/specification/v0_9/standard_catalog_definition.json"}}</a2a_datapart_json>`
 	content := &genai.Content{
 		Role: "model",
 		Parts: []*genai.Part{
@@ -144,16 +144,16 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected data object, got: %T", part["data"])
 	}
 
-	beginRendering, ok := dataObj["beginRendering"].(map[string]any)
-	if !ok || beginRendering["surfaceId"] != "test-surface" {
-		t.Fatalf("expected beginRendering.surfaceId='test-surface', got: %#v", dataObj)
+	createSurface, ok := dataObj["createSurface"].(map[string]any)
+	if !ok || createSurface["surfaceId"] != "test-surface" {
+		t.Fatalf("expected createSurface.surfaceId='test-surface', got: %#v", dataObj)
 	}
 }
 
 // TestA2UITextPartConvertsToNativeA2APart verifies that if a text part contains
 // legacy <a2a_datapart_json> tags, ConvertSnake unwraps it into a native A2A DataPart (kind: "data").
 func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
-	rawPayload := `<a2a_datapart_json>{"beginRendering":{"surfaceId":"text-surface-1","root":"root","catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}</a2a_datapart_json>`
+	rawPayload := `<a2a_datapart_json>{"createSurface":{"surfaceId":"text-surface-1","catalogId":"https://a2ui.org/specification/v0_9/standard_catalog_definition.json"}}</a2a_datapart_json>`
 	content := &genai.Content{
 		Role: "model",
 		Parts: []*genai.Part{
@@ -197,8 +197,8 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected data object, got: %T", part["data"])
 	}
 
-	beginRendering, ok := dataObj["beginRendering"].(map[string]any)
-	if !ok || beginRendering["surfaceId"] != "text-surface-1" {
-		t.Fatalf("expected beginRendering.surfaceId='text-surface-1', got: %#v", dataObj)
+	createSurface, ok := dataObj["createSurface"].(map[string]any)
+	if !ok || createSurface["surfaceId"] != "text-surface-1" {
+		t.Fatalf("expected createSurface.surfaceId='text-surface-1', got: %#v", dataObj)
 	}
 }
