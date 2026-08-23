@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"google.golang.org/genai"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -38,6 +39,7 @@ import (
 	"google.golang.org/adk/v2/session"
 	"github.com/tiaaburton/Data-Recon-Agent/internal/agentengine/internal/helper"
 	"github.com/tiaaburton/Data-Recon-Agent/internal/agentengine/internal/models"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
 )
 
 type streamingAgentRunWithEventsHandler struct {
@@ -140,10 +142,51 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 			continue
 		}
 
-		err = helper.EmitJSON(rw, models.StreamingAgentRunWithEventsResponse{
+		respObj := models.StreamingAgentRunWithEventsResponse{
 			Events:    []*session.Event{event},
 			SessionID: runReq.SessionID,
-		})
+		}
+
+		converted := helper.ConvertSnake(respObj)
+		if m, ok := converted.(map[string]any); ok {
+			hasFuncResp := false
+			if event.Content != nil {
+				for _, p := range event.Content.Parts {
+					if p.FunctionResponse != nil {
+						hasFuncResp = true
+						break
+					}
+				}
+			}
+
+			// If this is a model turn, inject pending A2UI DataParts into events[0].content.parts
+			if !hasFuncResp {
+				if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
+					if evs, ok := m["events"].([]any); ok && len(evs) > 0 {
+						if ev0, ok := evs[0].(map[string]any); ok {
+							if content, ok := ev0["content"].(map[string]any); ok {
+								existingParts, _ := content["parts"].([]any)
+								dataParts := make([]any, 0, len(pending)+len(existingParts))
+								for _, msg := range pending {
+									dataParts = append(dataParts, map[string]any{
+										"kind": "data",
+										"metadata": map[string]any{
+											"mimeType": a2ui.A2UIMimeType,
+										},
+										"data": msg,
+									})
+								}
+								content["parts"] = append(dataParts, existingParts...)
+								content["role"] = "model"
+							}
+						}
+					}
+				}
+			}
+			err = json.NewEncoder(rw).Encode(m)
+		} else {
+			err = helper.EmitJSON(rw, respObj)
+		}
 		if err != nil {
 			e := fmt.Errorf("helper.EmitJSON() failed: %w", err)
 			log.Print(e.Error())
@@ -155,6 +198,36 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 			break
 		}
 	}
+
+	// Guarantee that any pending A2UI visual cards are emitted before the stream closes
+	if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
+		dataParts := make([]any, 0, len(pending))
+		for _, msg := range pending {
+			dataParts = append(dataParts, map[string]any{
+				"kind": "data",
+				"metadata": map[string]any{
+					"mimeType": a2ui.A2UIMimeType,
+				},
+				"data": msg,
+			})
+		}
+		a2aResp := map[string]any{
+			"session_id": runReq.SessionID,
+			"events": []any{
+				map[string]any{
+					"author": "data_recon_agent",
+					"content": map[string]any{
+						"role":  "model",
+						"parts": dataParts,
+					},
+					"id":        fmt.Sprintf("a2ui-%d", time.Now().UnixNano()),
+					"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+				},
+			},
+		}
+		_ = json.NewEncoder(rw).Encode(a2aResp)
+	}
+
 	return nil
 }
 

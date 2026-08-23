@@ -2,7 +2,6 @@ package a2ui
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -34,6 +33,35 @@ func CleanRawJSONText(text string) string {
 	return strings.TrimSpace(cleaned)
 }
 
+// StorePendingA2UIMessages stores A2UI messages for a session.
+func StorePendingA2UIMessages(sessKey string, messages []any) {
+	if len(messages) == 0 {
+		return
+	}
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+	pendingMap[sessKey] = messages
+	if sessKey != "default" {
+		pendingMap["default"] = messages
+	}
+}
+
+// PopPendingA2UIMessages retrieves and clears pending A2UI messages for a session.
+func PopPendingA2UIMessages(sessKey string) []any {
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+	if msgs, ok := pendingMap[sessKey]; ok && len(msgs) > 0 {
+		delete(pendingMap, sessKey)
+		delete(pendingMap, "default")
+		return msgs
+	}
+	if msgs, ok := pendingMap["default"]; ok && len(msgs) > 0 {
+		delete(pendingMap, "default")
+		return msgs
+	}
+	return nil
+}
+
 func getSessionKey(ctx agent.InvocationContext) string {
 	if ctx != nil && ctx.Session() != nil {
 		return ctx.Session().ID()
@@ -41,8 +69,8 @@ func getSessionKey(ctx agent.InvocationContext) string {
 	return "default"
 }
 
-// NewA2UIPartsPlugin returns an ADK plugin that emits native A2A DataParts
-// on the model response event so that Gemini Enterprise natively renders interactive A2UI component cards.
+// NewA2UIPartsPlugin returns an ADK plugin that captures A2UI tool envelopes
+// and cleans conversational text parts so Gemini Enterprise renders interactive UI cards without raw JSON leaks.
 func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 	return plugin.New(plugin.Config{
 		Name: "a2ui_parts_plugin",
@@ -52,9 +80,8 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 			}
 
 			sessKey := getSessionKey(ctx)
-			newParts := make([]*genai.Part, 0, len(event.Content.Parts)+4)
+			newParts := make([]*genai.Part, 0, len(event.Content.Parts))
 			modified := false
-			hasFunctionResponse := false
 
 			for _, part := range event.Content.Parts {
 				// Clean text parts to avoid showing raw machine JSON or datapart tags in chat bubble
@@ -71,7 +98,6 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 
 				// Check function responses for A2UI payload envelopes
 				if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
-					hasFunctionResponse = true
 					respMap := part.FunctionResponse.Response
 					var rawPayload any
 					for k, v := range respMap {
@@ -103,25 +129,9 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							messages = []any{m}
 						}
 
-						// Store messages for attachment to the model response event
+						// Store messages for delivery on the model turn in SSE streaming
 						if len(messages) > 0 {
-							pendingMu.Lock()
-							pendingMap[sessKey] = messages
-							pendingMu.Unlock()
-						}
-
-						// Also attach to tool response part for completeness
-						for _, msg := range messages {
-							msgBytes, err := json.Marshal(msg)
-							if err == nil && len(msgBytes) > 0 {
-								wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
-								newParts = append(newParts, &genai.Part{
-									InlineData: &genai.Blob{
-										MIMEType: A2UIMimeType,
-										Data:     []byte(wrappedData),
-									},
-								})
-							}
+							StorePendingA2UIMessages(sessKey, messages)
 						}
 
 						sanitizedResp := make(map[string]any)
@@ -138,37 +148,6 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 				}
 
 				newParts = append(newParts, part)
-			}
-
-			// If this is a model response turn (not a function response event), attach any pending A2UI parts
-			if !hasFunctionResponse {
-				pendingMu.Lock()
-				messages, hasPending := pendingMap[sessKey]
-				if hasPending && len(messages) > 0 {
-					delete(pendingMap, sessKey)
-				}
-				pendingMu.Unlock()
-
-				if hasPending && len(messages) > 0 {
-					a2uiParts := make([]*genai.Part, 0, len(messages))
-					for _, msg := range messages {
-						msgBytes, err := json.Marshal(msg)
-						if err == nil && len(msgBytes) > 0 {
-							wrappedData := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
-							a2uiParts = append(a2uiParts, &genai.Part{
-								InlineData: &genai.Blob{
-									MIMEType: A2UIMimeType,
-									Data:     []byte(wrappedData),
-								},
-							})
-						}
-					}
-
-					// Prepend A2UI DataParts before any text parts
-					newParts = append(a2uiParts, newParts...)
-					event.Content.Role = genai.RoleModel
-					modified = true
-				}
 			}
 
 			if modified {

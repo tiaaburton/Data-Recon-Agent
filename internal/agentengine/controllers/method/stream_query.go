@@ -30,6 +30,7 @@ import (
 	"google.golang.org/adk/v2/runner"
 	"github.com/tiaaburton/Data-Recon-Agent/internal/agentengine/internal/helper"
 	"github.com/tiaaburton/Data-Recon-Agent/internal/agentengine/internal/models"
+	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
 	"google.golang.org/adk/v2/session"
 )
 
@@ -113,7 +114,40 @@ func (s *streamQueryHandler) streamJSONL(ctx context.Context, rw http.ResponseWr
 			continue
 		}
 
-		err = helper.EmitJSON(rw, *event)
+		converted := helper.ConvertSnake(*event)
+		if m, ok := converted.(map[string]any); ok {
+			hasFuncResp := false
+			if event.Content != nil {
+				for _, p := range event.Content.Parts {
+					if p.FunctionResponse != nil {
+						hasFuncResp = true
+						break
+					}
+				}
+			}
+			if !hasFuncResp {
+				if pending := a2ui.PopPendingA2UIMessages(req.Input.SessionID); len(pending) > 0 {
+					if content, ok := m["content"].(map[string]any); ok {
+						existingParts, _ := content["parts"].([]any)
+						dataParts := make([]any, 0, len(pending)+len(existingParts))
+						for _, msg := range pending {
+							dataParts = append(dataParts, map[string]any{
+								"kind": "data",
+								"metadata": map[string]any{
+									"mimeType": a2ui.A2UIMimeType,
+								},
+								"data": msg,
+							})
+						}
+						content["parts"] = append(dataParts, existingParts...)
+						content["role"] = "model"
+					}
+				}
+			}
+			err = json.NewEncoder(rw).Encode(m)
+		} else {
+			err = helper.EmitJSON(rw, *event)
+		}
 		if err != nil {
 			e := fmt.Errorf("helper.EmitJSON() failed: %w", err)
 			log.Print(e.Error())

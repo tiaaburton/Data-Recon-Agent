@@ -344,26 +344,30 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 		t.Fatalf("Expected a2ui_status A2UI_SURFACE_SYNTHESIZED on function response part")
 	}
 
+	pending := a2ui.PopPendingA2UIMessages("default")
+	if len(pending) != 2 {
+		t.Fatalf("Expected 2 captured A2UI messages in pending store, got %d", len(pending))
+	}
+
 	foundCreateSurface := false
 	foundUpdateComponents := false
-	for _, p := range resEvent.Content.Parts {
-		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
-			dataStr := string(p.InlineData.Data)
-			if strings.Contains(dataStr, "createSurface") && strings.Contains(dataStr, "basic_catalog.json") {
-				foundCreateSurface = true
-			}
-			if strings.Contains(dataStr, "updateComponents") && strings.Contains(dataStr, "btn-stage-credit") {
-				foundUpdateComponents = true
-			}
+	for _, msg := range pending {
+		msgBytes, _ := json.Marshal(msg)
+		dataStr := string(msgBytes)
+		if strings.Contains(dataStr, "createSurface") && strings.Contains(dataStr, "basic_catalog.json") {
+			foundCreateSurface = true
+		}
+		if strings.Contains(dataStr, "updateComponents") && strings.Contains(dataStr, "btn-stage-credit") {
+			foundUpdateComponents = true
 		}
 	}
 
 	if !foundCreateSurface || !foundUpdateComponents {
-		t.Fatalf("Expected native A2A DataParts in InlineData for createSurface and updateComponents with buttons (create=%v, update=%v)",
+		t.Fatalf("Expected captured A2UI messages for createSurface and updateComponents with buttons (create=%v, update=%v)",
 			foundCreateSurface, foundUpdateComponents)
 	}
 
-	t.Logf("✓ A2UIPartsPlugin successfully converted tool responses to native A2A DataParts with interactive buttons.")
+	t.Logf("✓ A2UIPartsPlugin successfully captured A2UI envelopes and sanitized tool responses for native SSE streaming.")
 }
 
 func TestPIIGuardrailRedaction(t *testing.T) {
