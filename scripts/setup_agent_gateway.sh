@@ -88,47 +88,49 @@ gcloud network-security authz-policies import "$AUTHZ_POLICY_NAME" \
 # 4. Register Reasoning Engine Service in Agent Registry
 # ------------------------------------------------------------------------------
 echo ""
-echo "--> 4. Registering Reasoning Engine in Regional Agent Registry..."
+echo "--> 4. Registering Reasoning Engine in Regional & Global Agent Registries..."
 ENGINE_URI="https://${REGION}-aiplatform.mtls.googleapis.com/v1/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${REASONING_ENGINE_ID}"
 
-gcloud agent-registry services create "$SERVICE_ENTRY_NAME" \
-  --project="$PROJECT_ID" \
-  --location="$REGION" \
-  --display-name="Data Reconciliation Agent (ADK v2)" \
-  --endpoint-spec-type=no-spec \
-  --interfaces="url=${ENGINE_URI},protocolBinding=jsonrpc" \
-  --format="value(registryResource)" || {
-    echo "Notice: Service entry $SERVICE_ENTRY_NAME already registered or up-to-date."
-  }
+for LOC in "$REGION" "global"; do
+  gcloud agent-registry services create "$SERVICE_ENTRY_NAME" \
+    --project="$PROJECT_ID" \
+    --location="$LOC" \
+    --display-name="Data Reconciliation Agent (ADK v2 / A2UI)" \
+    --endpoint-spec-type=no-spec \
+    --interfaces="url=${ENGINE_URI},protocolBinding=jsonrpc" \
+    --format="value(registryResource)" || true
+done
 
 # ------------------------------------------------------------------------------
 # 5. Register Outbound Dependency Endpoints in Agent Registry
 # ------------------------------------------------------------------------------
 echo ""
 echo "--> 5. Registering Outbound Integration Endpoints (Salesforce, ServiceNow, Vertex AI)..."
-# Register Salesforce Endpoint
-gcloud agent-registry services create "salesforce-revenue-cloud" \
-  --project="$PROJECT_ID" \
-  --location="$REGION" \
-  --display-name="Salesforce Dev Org (Revenue Cloud)" \
-  --endpoint-spec-type=no-spec \
-  --interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=http-json" || true
+for LOC in "$REGION" "global"; do
+  # Register Salesforce Endpoint
+  gcloud agent-registry services create "salesforce-revenue-cloud" \
+    --project="$PROJECT_ID" \
+    --location="$LOC" \
+    --display-name="Salesforce Dev Org (Revenue Cloud)" \
+    --endpoint-spec-type=no-spec \
+    --interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=http-json" || true
 
-# Register ServiceNow Endpoint
-gcloud agent-registry services create "servicenow-itsm" \
-  --project="$PROJECT_ID" \
-  --location="$REGION" \
-  --display-name="ServiceNow Dev Instance (ITSM Incidents)" \
-  --endpoint-spec-type=no-spec \
-  --interfaces="url=https://dev410998.service-now.com,protocolBinding=http-json" || true
+  # Register ServiceNow Endpoint
+  gcloud agent-registry services create "servicenow-itsm" \
+    --project="$PROJECT_ID" \
+    --location="$LOC" \
+    --display-name="ServiceNow Dev Instance (ITSM Incidents)" \
+    --endpoint-spec-type=no-spec \
+    --interfaces="url=https://dev410998.service-now.com,protocolBinding=http-json" || true
 
-# Register Vertex AI & Gemini APIs
-gcloud agent-registry services create "vertex-gemini-api" \
-  --project="$PROJECT_ID" \
-  --location="$REGION" \
-  --display-name="Vertex AI Gemini APIs" \
-  --endpoint-spec-type=no-spec \
-  --interfaces="url=https://${REGION}-aiplatform.googleapis.com,protocolBinding=http-json" || true
+  # Register Vertex AI & Gemini APIs
+  gcloud agent-registry services create "vertex-gemini-api" \
+    --project="$PROJECT_ID" \
+    --location="$LOC" \
+    --display-name="Vertex AI Gemini APIs" \
+    --endpoint-spec-type=no-spec \
+    --interfaces="url=https://${REGION}-aiplatform.googleapis.com,protocolBinding=http-json" || true
+done
 
 # ------------------------------------------------------------------------------
 # 6. Bind Reasoning Engine to Agent Gateway
