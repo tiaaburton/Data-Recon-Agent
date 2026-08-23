@@ -32,9 +32,10 @@ echo -e "${CYAN}  • Running go vet on cmd, pkg, and tests...${RESET}"
 go vet ./cmd/... ./pkg/... ./tests/...
 
 # 3. GolangCI-Lint (if installed)
-if command -v golangci-lint >/dev/null 2>&1; then
-  echo -e "${CYAN}  • Running golangci-lint...${RESET}"
-  golangci-lint run --config=.golangci.yml
+GOLANGCI_BIN=$(which golangci-lint 2>/dev/null || which $(go env GOPATH)/bin/golangci-lint 2>/dev/null || which $HOME/go/bin/golangci-lint 2>/dev/null || true)
+if [ -n "$GOLANGCI_BIN" ] && [ -x "$GOLANGCI_BIN" ]; then
+  echo -e "${CYAN}  • Running golangci-lint ($GOLANGCI_BIN)...${RESET}"
+  $GOLANGCI_BIN run --config=.golangci.yml
 fi
 
 # 4. Fast Unit & Evaluation Tests

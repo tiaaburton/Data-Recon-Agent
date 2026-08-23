@@ -245,8 +245,8 @@ func (f *deployAgentEngineFlags) gcloudDeployToAgentEngine() error {
 				return fmt.Errorf("cannot create ReasoningEngineClient: %w", err)
 			}
 			defer func() {
-				if err := client.Close(); err != nil {
-					p("Warning: failed to close ReasoningEngineClient: %v", err)
+				if cErr := client.Close(); cErr != nil {
+					p("Warning: failed to close ReasoningEngineClient: %v", cErr)
 				}
 			}()
 
@@ -323,8 +323,8 @@ func (f *deployAgentEngineFlags) gcloudUpdateAgentEngine() error {
 				return fmt.Errorf("cannot create ReasoningEngineClient: %w", err)
 			}
 			defer func() {
-				if err := client.Close(); err != nil {
-					p("Warning: failed to close ReasoningEngineClient: %v", err)
+				if cErr := client.Close(); cErr != nil {
+					p("Warning: failed to close ReasoningEngineClient: %v", cErr)
 				}
 			}()
 

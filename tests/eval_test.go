@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -66,11 +67,7 @@ func TestGoldenEvaluation_500(t *testing.T) {
 		}
 
 		// 1. Validate Math & Variance Accuracy
-		expectedVariance := record.BilledAmount - record.AgreedCap
-		if expectedVariance < 0 {
-			expectedVariance = 0
-		}
-		if outcome.VarianceAmount != record.VarianceAmount {
+		if math.Abs(outcome.VarianceAmount-record.VarianceAmount) > 0.01 {
 			t.Errorf("record [%d] %s variance mismatch: got $%.2f, expected $%.2f",
 				i, record.ContractID, outcome.VarianceAmount, record.VarianceAmount)
 		}

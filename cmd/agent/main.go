@@ -297,7 +297,7 @@ func main() {
 			defer func() {
 				sCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				providers.Shutdown(sCtx)
+				_ = providers.Shutdown(sCtx)
 			}()
 			log.Printf("✓ OpenTelemetry initialized for GCP Cloud Trace & Cloud Logging (Project: %s)", project)
 		} else {
@@ -329,8 +329,8 @@ func main() {
 		Backend:    genai.BackendEnterprise,
 		HTTPClient: httpClient,
 	}
-	if err := clientConfig.UseDefaultCredentials(); err != nil {
-		log.Printf("Notice: UseDefaultCredentials info: %v", err)
+	if credErr := clientConfig.UseDefaultCredentials(); credErr != nil {
+		log.Printf("Notice: UseDefaultCredentials info: %v", credErr)
 	}
 
 	geminiModel, err := gemini.NewModel(ctx, modelName, clientConfig)
@@ -346,16 +346,20 @@ func main() {
 		log.Fatalf("Failed to create render_discrepancy_card tool: %v", err)
 	}
 
-	reconcileTool, err := functiontool.New(functiontool.Config{
+	reconcileTool, toolErr := functiontool.New(functiontool.Config{
 		Name:        "reconcile_contract",
 		Description: "Autonomously correlates Salesforce billed records and ServiceNow dispute incidents for a given contract ID, computing financial variance and generating declarative A2UI components.",
 	}, handleReconcileContract)
-	applyResolutionTool, err := functiontool.New(functiontool.Config{
+	if toolErr != nil {
+		log.Fatalf("Failed to create reconcile_contract tool: %v", toolErr)
+	}
+
+	applyResolutionTool, toolErr := functiontool.New(functiontool.Config{
 		Name:        "apply_resolution_action",
 		Description: "Executes a selected reconciliation resolution action (e.g. stage_salesforce_billing_adjustment, escalate_finance_ops, dismiss_variance), posting credits to Salesforce Revenue Cloud and resolving ServiceNow ITSM dispute tickets.",
 	}, handleApplyResolution)
-	if err != nil {
-		log.Fatalf("Failed to create apply_resolution_action tool: %v", err)
+	if toolErr != nil {
+		log.Fatalf("Failed to create apply_resolution_action tool: %v", toolErr)
 	}
 
 	agentInstructions := `You are the Autonomous Enterprise Data Reconciliation Agent built on Google Agent Development Kit (ADK) v2.0.
@@ -399,11 +403,11 @@ Capabilities & Instructions:
 		os.Getenv("AGENT_ENGINE_ID"),
 	)
 	if engineID != "" {
-		if sSvc, err := vertexaisession.NewSessionService(ctx, vertexaisession.VertexAIServiceConfig{
+		if sSvc, sErr := vertexaisession.NewSessionService(ctx, vertexaisession.VertexAIServiceConfig{
 			ProjectID:       project,
 			Location:        sessionLocation,
 			ReasoningEngine: engineID,
-		}); err == nil && sSvc != nil {
+		}); sErr == nil && sSvc != nil {
 			sessionService = sSvc
 			log.Printf("✓ Connected to Vertex AI Agent Engine Cloud Session Service (Project: %s, Location: %s, Engine: %s)", project, sessionLocation, engineID)
 		}
@@ -413,14 +417,14 @@ Capabilities & Instructions:
 		log.Printf("Using In-Memory Session Service (Local Dev / Fallback).")
 	}
 
-	a2uiPlugin, err := a2ui.NewA2UIPartsPlugin()
-	if err != nil {
-		logger.Error(ctx, "Failed to create A2UI Parts Plugin", "error", err)
+	a2uiPlugin, aErr := a2ui.NewA2UIPartsPlugin()
+	if aErr != nil {
+		logger.Error(ctx, "Failed to create A2UI Parts Plugin", "error", aErr)
 	}
 
-	piiPlugin, err := guardrails.NewPIIGuardrailPlugin()
-	if err != nil {
-		logger.Error(ctx, "Failed to create PII Guardrail Plugin", "error", err)
+	piiPlugin, pErr := guardrails.NewPIIGuardrailPlugin()
+	if pErr != nil {
+		logger.Error(ctx, "Failed to create PII Guardrail Plugin", "error", pErr)
 	}
 
 	plugins := []*plugin.Plugin{a2uiPlugin}
@@ -506,13 +510,19 @@ Capabilities & Instructions:
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 	})
 
-	if err := http.ListenAndServe(host+":"+publicPort, mux); err != nil {
+	server := &http.Server{
+		Addr:              host + ":" + publicPort,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Proxy server failed: %v", err)
 	}
 }

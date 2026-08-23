@@ -40,6 +40,7 @@ func AuthenticateSalesforce(instanceURL, clientID, clientSecret, username, passw
 		"password":      {password},
 	}
 
+	// #nosec G107 -- Dynamic OAuth2 endpoint for configurable Salesforce instance
 	resp, err := http.PostForm(tokenURL, formData)
 	if err != nil {
 		return "", fmt.Errorf("failed to reach salesforce oauth endpoint: %w", err)

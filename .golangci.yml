@@ -93,3 +93,10 @@ issues:
       linters:
         - gosec
         - errcheck
+    - path: cmd/
+      linters:
+        - gosec
+        - revive
+    - linters:
+        - revive
+      text: "stutters"

@@ -26,8 +26,8 @@ func main() {
 	}
 
 	var records []schemas.CorrelatedReconciliationRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		log.Fatalf("failed to parse dataset JSON: %v", err)
+	if uErr := json.Unmarshal(data, &records); uErr != nil {
+		log.Fatalf("failed to parse dataset JSON: %v", uErr)
 	}
 
 	sfdcURL := os.Getenv("SFDC_INSTANCE_URL")

@@ -107,7 +107,6 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 										Data:     []byte(wrappedData),
 									},
 								})
-								modified = true
 							}
 						}
 

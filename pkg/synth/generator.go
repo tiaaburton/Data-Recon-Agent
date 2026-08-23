@@ -25,6 +25,7 @@ var enterpriseAccounts = []string{
 
 // GenerateRecords produces N mathematically correlated reconciliation records.
 func GenerateRecords(count int) ([]schemas.CorrelatedReconciliationRecord, error) {
+	// #nosec G404 -- Synthetic dataset generation for evaluation benchmarks
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	records := make([]schemas.CorrelatedReconciliationRecord, 0, count)
 

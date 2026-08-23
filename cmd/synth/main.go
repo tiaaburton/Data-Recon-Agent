@@ -27,17 +27,17 @@ func main() {
 
 	// Ensure output directory exists
 	dir := filepath.Dir(*outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Fatalf("failed to create output directory: %v", err)
+	if mkErr := os.MkdirAll(dir, 0750); mkErr != nil {
+		log.Fatalf("failed to create output directory: %v", mkErr)
 	}
 
-	data, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		log.Fatalf("failed to marshal JSON: %v", err)
+	data, mErr := json.MarshalIndent(records, "", "  ")
+	if mErr != nil {
+		log.Fatalf("failed to marshal JSON: %v", mErr)
 	}
 
-	if err := os.WriteFile(*outputPath, data, 0644); err != nil {
-		log.Fatalf("failed to write output file: %v", err)
+	if wErr := os.WriteFile(*outputPath, data, 0600); wErr != nil {
+		log.Fatalf("failed to write output file: %v", wErr)
 	}
 
 	// Calculate counts

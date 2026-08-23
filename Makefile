@@ -170,9 +170,10 @@ fmt: ## Format Go source code and tidy imports
 lint: ## Run go vet and golangci-lint checks
 	@echo -e "$(CYAN)--> Running Go vet and static code analysis...$(RESET)"
 	@go vet ./cmd/... ./pkg/... ./tests/...
-	@if which golangci-lint >/dev/null 2>&1; then \
-		echo -e "$(CYAN)--> Running golangci-lint...$(RESET)"; \
-		golangci-lint run --config=.golangci.yml; \
+	@GOLANGCI_BIN=$$(which golangci-lint 2>/dev/null || which $$(go env GOPATH)/bin/golangci-lint 2>/dev/null || which $(HOME)/go/bin/golangci-lint 2>/dev/null || true); \
+	if [ -n "$$GOLANGCI_BIN" ] && [ -x "$$GOLANGCI_BIN" ]; then \
+		echo -e "$(CYAN)--> Running golangci-lint ($$GOLANGCI_BIN)...$(RESET)"; \
+		$$GOLANGCI_BIN run --config=.golangci.yml; \
 	else \
 		echo -e "$(YELLOW)Notice: golangci-lint not installed in PATH. Install via 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'$(RESET)"; \
 	fi
