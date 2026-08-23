@@ -228,7 +228,7 @@ func (f *deployAgentEngineFlags) createArchive() error {
 			}
 			p("Creating:", f.build.archivePath)
 			cmd := exec.Command("tar", "-czf", f.build.archivePath,
-				"-C", workspaceRoot, "--exclude=.git", "--exclude=bin", "--exclude=adkgo", ".",
+				"-C", workspaceRoot, "--exclude=.git", "--exclude=bin", "--exclude=adkgo", "--exclude=terraform", "--exclude=.terraform", "--exclude=tmp", ".",
 				"-C", f.build.tempDir, "Dockerfile")
 			return util.LogCommand(cmd, p)
 		})

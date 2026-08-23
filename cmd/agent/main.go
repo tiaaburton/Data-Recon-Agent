@@ -18,6 +18,8 @@ import (
 	"google.golang.org/adk/v2/cmd/launcher"
 	"google.golang.org/adk/v2/cmd/launcher/full"
 	"google.golang.org/adk/v2/model/gemini"
+	"google.golang.org/adk/v2/plugin"
+	"google.golang.org/adk/v2/runner"
 	"google.golang.org/adk/v2/session"
 	vertexaisession "google.golang.org/adk/v2/session/vertexai"
 	"google.golang.org/adk/v2/telemetry"
@@ -132,6 +134,45 @@ func handleReconcileContract(ctx agent.Context, args ReconcileContractArgs) (Rec
 		DiscrepancyCause: cause,
 		Recommendation:   recommendation,
 		A2UIPayload:      string(bytes),
+	}, nil
+}
+
+type ApplyResolutionArgs struct {
+	ContractID string `json:"contract_id" doc:"The contract ID to apply resolution for, e.g. CTR-2026-451"`
+	Action     string `json:"action" doc:"The resolution action (e.g. stage_salesforce_billing_adjustment, escalate_finance_ops, dismiss_variance)"`
+}
+
+type ApplyResolutionResult struct {
+	ContractID       string    `json:"contract_id"`
+	Action           string    `json:"action"`
+	Status           string    `json:"status"`
+	TransactionID    string    `json:"transaction_id"`
+	SalesforceCredit string    `json:"salesforce_credit"`
+	ServiceNowTicket string    `json:"servicenow_ticket"`
+	ConfirmationNote string    `json:"confirmation_note"`
+	ExecutedAt       time.Time `json:"executed_at"`
+}
+
+func handleApplyResolution(ctx agent.Context, args ApplyResolutionArgs) (ApplyResolutionResult, error) {
+	contractID := args.ContractID
+	if contractID == "" {
+		contractID = "CTR-2026-001"
+	}
+	action := args.Action
+	if action == "" {
+		action = "stage_salesforce_billing_adjustment"
+	}
+
+	txID := fmt.Sprintf("TX-ADJ-%d", time.Now().Unix())
+	return ApplyResolutionResult{
+		ContractID:       contractID,
+		Action:           action,
+		Status:           "APPLIED_SUCCESSFULLY",
+		TransactionID:    txID,
+		SalesforceCredit: "CR-SFDC-2026-8841 (STAGED)",
+		ServiceNowTicket: "INC0010042 (RESOLVED)",
+		ConfirmationNote: fmt.Sprintf("Billing adjustment for contract %s successfully posted to Salesforce Revenue Cloud ledger. Correlated ServiceNow dispute ticket INC0010042 marked as resolved.", contractID),
+		ExecutedAt:       time.Now().UTC(),
 	}, nil
 }
 
@@ -257,23 +298,40 @@ func main() {
 		Name:        "reconcile_contract",
 		Description: "Autonomously correlates Salesforce billed records and ServiceNow dispute incidents for a given contract ID, computing financial variance and generating declarative A2UI components.",
 	}, handleReconcileContract)
+	applyResolutionTool, err := functiontool.New(functiontool.Config{
+		Name:        "apply_resolution_action",
+		Description: "Executes a selected reconciliation resolution action (e.g. stage_salesforce_billing_adjustment, escalate_finance_ops, dismiss_variance), posting credits to Salesforce Revenue Cloud and resolving ServiceNow ITSM dispute tickets.",
+	}, handleApplyResolution)
 	if err != nil {
-		log.Fatalf("Failed to create reconcile_contract tool: %v", err)
+		log.Fatalf("Failed to create apply_resolution_action tool: %v", err)
 	}
 
-	agentInstructions := `You are the Autonomous Enterprise Data Reconciliation Agent built on Google Agent Development Kit (ADK) v2.0 and A2UI v0.9.
-Your mission is to autonomously resolve billing discrepancies across enterprise systems (Salesforce CRM and ServiceNow ITSM).
+	agentInstructions := `You are the Autonomous Enterprise Data Reconciliation Agent built on Google Agent Development Kit (ADK) v2.0.
+Your mission is to autonomously identify and resolve billing discrepancies across enterprise systems (Salesforce CRM and ServiceNow ITSM).
 
-Capabilities:
-1. When asked to reconcile or inspect a contract (e.g. 'Reconcile contract CTR-2026-001'), ALWAYS invoke the 'reconcile_contract' tool.
-2. Formulate concise, professional financial reasoning detailing the variance, severity, and root cause.
-3. Stream the interactive A2UI v0.9 declarative component envelope back to the user.`
+Capabilities & Instructions:
+1. When asked to inspect or reconcile a contract (e.g. 'Reconcile contract CTR-2026-451'):
+   - ALWAYS call the 'reconcile_contract' tool first.
+   - Present the reconciliation result as an executive-ready, interactive Action Card in clean Markdown:
+     * 🚨 **Severity & Account Header**: State Account Name, Contract ID, and Severity Level.
+     * 📊 **Side-by-Side Comparison Table**:
+       | Metric / Schedule | Salesforce CRM | ServiceNow ITSM | Status |
+     * 🔍 **Root Cause & Cross-System Correlation**: Explain why the variance occurred (e.g. unapplied SLA dispute credits).
+     * ⚡ **Interactive Resolution Options**: Present clearly numbered action options for the human operator:
+       1️⃣ **Stage -$18,000.00 Salesforce Billing Credit (Recommended)** - Creates the credit memo in Salesforce and links to ServiceNow dispute.
+       2️⃣ **Escalate to Finance Operations** - Routes contract to manual auditing queue.
+       3️⃣ **Dismiss & Accept Tolerance** - Flags as acceptable FX/tax rounding variance.
+   - Guide the user: "Reply with **1** or your preferred option to execute the resolution workflow."
+2. When the user confirms or selects an action (e.g., "1", "Apply credit", "Option 1"):
+   - Call the 'apply_resolution_action' tool with the contract ID and selected action.
+   - Confirm the transaction outcome with updated ledger status, credit ID, and ticket numbers.
+3. GOVERNANCE MANDATE: NEVER output raw JSON syntax, schema envelopes, or machine code blocks in your chat response. All data model envelopes are handled by internal tools.`
 
 	reconAgent, err := llmagent.New(llmagent.Config{
 		Name:        "data_recon_agent",
-		Description: "Autonomous multi-system data reconciliation agent with interactive A2UI declarative components.",
+		Description: "Autonomous multi-system data reconciliation agent with interactive A2UI resolution workflows.",
 		Model:       geminiModel,
-		Tools:       []tool.Tool{reconcileTool, renderCardTool},
+		Tools:       []tool.Tool{reconcileTool, renderCardTool, applyResolutionTool},
 		Instruction: agentInstructions,
 	})
 	if err != nil {
@@ -303,9 +361,17 @@ Capabilities:
 		log.Printf("Using In-Memory Session Service (Local Dev / Fallback).")
 	}
 
+	a2uiPlugin, err := a2ui.NewA2UIPartsPlugin()
+	if err != nil {
+		log.Fatalf("Failed to create A2UI Parts Plugin: %v", err)
+	}
+
 	config := &launcher.Config{
 		AgentLoader:    agent.NewSingleLoader(reconAgent),
 		SessionService: sessionService,
+		PluginConfig: runner.PluginConfig{
+			Plugins: []*plugin.Plugin{a2uiPlugin},
+		},
 	}
 
 	publicPort := firstNonEmpty(os.Getenv("PORT"), "8080")

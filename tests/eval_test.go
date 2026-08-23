@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/adk/v2/model"
+	"google.golang.org/adk/v2/session"
+	"google.golang.org/genai"
 
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/a2ui"
 	"github.com/tiaaburton/Data-Recon-Agent/pkg/agent"
@@ -268,4 +273,67 @@ func TestMultiturnReasoningEngineEvaluation(t *testing.T) {
 		t.Fatalf("Turn 2 A2UI payload missing surface or components")
 	}
 	t.Logf("✓ Multi-turn evaluation completed successfully without serialization or state corruption.")
+}
+
+func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
+	plug, err := a2ui.NewA2UIPartsPlugin()
+	if err != nil {
+		t.Fatalf("Failed to create A2UI plugin: %v", err)
+	}
+
+	testEvent := &session.Event{
+		LLMResponse: model.LLMResponse{
+			Content: &genai.Content{
+				Role: "model",
+				Parts: []*genai.Part{
+					{
+						FunctionResponse: &genai.FunctionResponse{
+							Name: "reconcile_contract",
+							Response: map[string]any{
+								"contract_id": "CTR-2026-451",
+								"a2ui_json":   `{"version":"v0.9","createSurface":{"surfaceId":"surface-CTR-451"}}`,
+							},
+						},
+					},
+					{
+						Text: "Here is the summary:\n```json\n{\n  \"version\": \"v0.9\",\n  \"createSurface\": {}\n}\n```",
+					},
+				},
+			},
+		},
+	}
+
+	// Invoke plugin callback
+	callback := plug.OnEventCallback()
+	if callback == nil {
+		t.Fatalf("Expected OnEventCallback to be configured")
+	}
+
+	resEvent, err := callback(nil, testEvent)
+	if err != nil {
+		t.Fatalf("OnEventCallback returned error: %v", err)
+	}
+	if resEvent == nil {
+		t.Fatalf("Expected modified event, got nil")
+	}
+
+	// Verify DataPart was emitted
+	foundDataPart := false
+	for _, p := range resEvent.Content.Parts {
+		if p.InlineData != nil && p.InlineData.MIMEType == a2ui.A2UIMimeType {
+			foundDataPart = true
+			dataStr := string(p.InlineData.Data)
+			if !strings.Contains(dataStr, "<a2a_datapart_json>") {
+				t.Fatalf("Expected <a2a_datapart_json> wrapper in data part, got: %s", dataStr)
+			}
+			if !strings.Contains(dataStr, "surface-CTR-451") {
+				t.Fatalf("Expected payload content in data part, got: %s", dataStr)
+			}
+		}
+	}
+
+	if !foundDataPart {
+		t.Fatalf("Expected A2A DataPart with mimeType %s, none found", a2ui.A2UIMimeType)
+	}
+	t.Logf("✓ A2UIPartsPlugin successfully converted tool response into native A2A DataPart for Gemini Enterprise rendering.")
 }
