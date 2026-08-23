@@ -112,7 +112,7 @@ gcloud agent-registry services create "salesforce-revenue-cloud" \
   --location="$REGION" \
   --display-name="Salesforce Dev Org (Revenue Cloud)" \
   --endpoint-spec-type=no-spec \
-  --interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=https" || true
+  --interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=http-json" || true
 
 # Register ServiceNow Endpoint
 gcloud agent-registry services create "servicenow-itsm" \
@@ -120,7 +120,7 @@ gcloud agent-registry services create "servicenow-itsm" \
   --location="$REGION" \
   --display-name="ServiceNow Dev Instance (ITSM Incidents)" \
   --endpoint-spec-type=no-spec \
-  --interfaces="url=https://dev410998.service-now.com,protocolBinding=https" || true
+  --interfaces="url=https://dev410998.service-now.com,protocolBinding=http-json" || true
 
 # Register Vertex AI & Gemini APIs
 gcloud agent-registry services create "vertex-gemini-api" \
@@ -128,7 +128,7 @@ gcloud agent-registry services create "vertex-gemini-api" \
   --location="$REGION" \
   --display-name="Vertex AI Gemini APIs" \
   --endpoint-spec-type=no-spec \
-  --interfaces="url=https://${REGION}-aiplatform.googleapis.com,protocolBinding=https" || true
+  --interfaces="url=https://${REGION}-aiplatform.googleapis.com,protocolBinding=http-json" || true
 
 # ------------------------------------------------------------------------------
 # 6. Bind Reasoning Engine to Agent Gateway

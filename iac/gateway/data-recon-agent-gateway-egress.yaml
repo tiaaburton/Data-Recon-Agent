@@ -7,4 +7,4 @@ protocols:
 googleManaged:
   governedAccessPath: AGENT_TO_ANYWHERE
 registries:
-  - projects/tias-demos/locations/us-central1/registries/default
+  - //agentregistry.googleapis.com/projects/tias-demos/locations/us-central1

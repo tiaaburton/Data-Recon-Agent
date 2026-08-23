@@ -50,6 +50,9 @@ PAYLOAD=$(cat <<EOF
     "provisionedReasoningEngine": {
       "reasoningEngine": "${ENGINE_PATH}"
     }
+  },
+  "sharingConfig": {
+    "scope": "ALL_USERS"
   }
 }
 EOF
@@ -72,7 +75,7 @@ if [[ -n "${GE_AGENT_ID:-}" ]]; then
     -H "X-Goog-User-Project: $PROJECT_ID" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" \
-    "${BASE_URL}/${GE_AGENT_ID}?updateMask=displayName,description,adkAgentDefinition" | format_json
+    "${BASE_URL}/${GE_AGENT_ID}?updateMask=displayName,description,adkAgentDefinition,sharingConfig" | format_json
 else
   echo "Creating new agent registration..."
   RESP=$(curl -s -X POST \

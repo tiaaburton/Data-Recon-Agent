@@ -238,12 +238,12 @@ register-endpoints: ## Register Salesforce, ServiceNow, and Vertex AI endpoints 
 		--project=$(PROJECT_ID) --location=$(REGION) \
 		--display-name="Salesforce Dev Org (Revenue Cloud)" \
 		--endpoint-spec-type=no-spec \
-		--interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=https" || true
+		--interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=http-json" || true
 	@gcloud agent-registry services create servicenow-itsm \
 		--project=$(PROJECT_ID) --location=$(REGION) \
 		--display-name="ServiceNow Dev Instance (ITSM Incidents)" \
 		--endpoint-spec-type=no-spec \
-		--interfaces="url=https://dev410998.service-now.com,protocolBinding=https" || true
+		--interfaces="url=https://dev410998.service-now.com,protocolBinding=http-json" || true
 
 .PHONY: tf-init tf-plan tf-apply
 tf-init: ## Initialize Terraform providers and backend in terraform/

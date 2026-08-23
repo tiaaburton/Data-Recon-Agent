@@ -10,6 +10,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "project_number" {
+  type        = string
+  description = "Google Cloud Project Number"
+  default     = "14200540645"
+}
+
 variable "agent_engine_id" {
   type        = string
   description = "Vertex AI Reasoning Engine ID for Data Recon Agent"

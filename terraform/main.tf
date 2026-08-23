@@ -9,6 +9,14 @@ terraform {
       source  = "hashicorp/google-beta"
       version = ">= 5.30.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = ">= 3.2.0"
+    }
   }
 }
 
@@ -40,7 +48,10 @@ locals {
     "telemetry.googleapis.com",
     "monitoring.googleapis.com",
     "cloudtrace.googleapis.com",
-    "logging.googleapis.com"
+    "logging.googleapis.com",
+    "secretmanager.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "cloudbuild.googleapis.com"
   ]
 }
 
@@ -53,7 +64,46 @@ resource "google_project_service" "services" {
 }
 
 # ------------------------------------------------------------------------------
-# 2. Agent Gateway Manifest Application (Declarative Resource Delivery)
+# 2. Artifact Registry Module
+# ------------------------------------------------------------------------------
+module "artifact_registry" {
+  source     = "./modules/artifact_registry"
+  project_id = var.project_id
+  region     = var.region
+  depends_on = [google_project_service.services]
+}
+
+# ------------------------------------------------------------------------------
+# 3. Cloud Storage Module
+# ------------------------------------------------------------------------------
+module "storage" {
+  source     = "./modules/storage"
+  project_id = var.project_id
+  region     = var.region
+  depends_on = [google_project_service.services]
+}
+
+# ------------------------------------------------------------------------------
+# 4. Secret Manager Module
+# ------------------------------------------------------------------------------
+module "secrets" {
+  source     = "./modules/secrets"
+  project_id = var.project_id
+  depends_on = [google_project_service.services]
+}
+
+# ------------------------------------------------------------------------------
+# 5. IAM & Service Accounts Module
+# ------------------------------------------------------------------------------
+module "iam" {
+  source         = "./modules/iam"
+  project_id     = var.project_id
+  project_number = var.project_number
+  depends_on     = [google_project_service.services]
+}
+
+# ------------------------------------------------------------------------------
+# 6. Agent Gateway & Registry Declarative Delivery
 # ------------------------------------------------------------------------------
 resource "null_resource" "agent_gateway_egress" {
   depends_on = [google_project_service.services]
@@ -72,9 +122,6 @@ resource "null_resource" "agent_gateway_egress" {
   }
 }
 
-# ------------------------------------------------------------------------------
-# 3. IAP Service Extension & Network Security Policy
-# ------------------------------------------------------------------------------
 resource "null_resource" "iap_authz_extension" {
   depends_on = [null_resource.agent_gateway_egress]
 
@@ -98,9 +145,6 @@ resource "null_resource" "iap_authz_extension" {
   }
 }
 
-# ------------------------------------------------------------------------------
-# 4. Agent Registry Registrations
-# ------------------------------------------------------------------------------
 resource "null_resource" "agent_registry_entries" {
   depends_on = [null_resource.agent_gateway_egress]
 
@@ -109,4 +153,15 @@ resource "null_resource" "agent_registry_entries" {
       bash "${path.module}/../scripts/setup_agent_gateway.sh"
     EOT
   }
+}
+
+# ------------------------------------------------------------------------------
+# 7. Gemini Enterprise Agent Platform Module
+# ------------------------------------------------------------------------------
+module "gemini_enterprise" {
+  source              = "./modules/gemini_enterprise"
+  project_id          = var.project_id
+  project_number      = var.project_number
+  reasoning_engine_id = var.agent_engine_id
+  depends_on          = [null_resource.agent_registry_entries]
 }
