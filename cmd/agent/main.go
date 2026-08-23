@@ -241,6 +241,14 @@ func handleRenderDiscrepancyCard(ctx agent.Context, args tools.RenderDiscrepancy
 	return *res, nil
 }
 
+func handleRenderHITLApprovalCard(ctx agent.Context, args tools.RenderHITLApprovalCardArgs) (tools.RenderDiscrepancyCardResult, error) {
+	res, err := tools.RenderHITLApprovalCardHandler(ctx, args)
+	if err != nil {
+		return tools.RenderDiscrepancyCardResult{}, err
+	}
+	return *res, nil
+}
+
 func main() {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load(".env")
@@ -367,6 +375,14 @@ func main() {
 		log.Fatalf("Failed to create apply_resolution_action tool: %v", toolErr)
 	}
 
+	renderHITLTool, toolErr := functiontool.New(functiontool.Config{
+		Name:        "render_hitl_approval_card",
+		Description: "Renders an interactive A2UI card requiring cryptographic human-in-the-loop sign-off before writing ledger adjustments.",
+	}, handleRenderHITLApprovalCard)
+	if toolErr != nil {
+		log.Fatalf("Failed to create render_hitl_approval_card tool: %v", toolErr)
+	}
+
 	agentInstructions := `You are the Autonomous Enterprise Data Reconciliation Agent built on Google Agent Development Kit (ADK) v2.0.
 Your mission is to autonomously identify and resolve billing discrepancies across enterprise systems (Salesforce CRM and ServiceNow ITSM).
 
@@ -386,7 +402,7 @@ Capabilities & Instructions:
 		Name:        "data_recon_agent",
 		Description: "Autonomous multi-system data reconciliation agent with interactive A2UI resolution workflows.",
 		Model:       geminiModel,
-		Tools:       []tool.Tool{reconcileTool, renderCardTool, applyResolutionTool},
+		Tools:       []tool.Tool{reconcileTool, renderCardTool, renderHITLTool, applyResolutionTool},
 		Instruction: agentInstructions,
 	})
 	if err != nil {

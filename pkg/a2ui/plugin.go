@@ -1,6 +1,8 @@
 package a2ui
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -17,12 +19,74 @@ import (
 const A2UIMimeType = "application/json+a2ui"
 
 var (
-	rawJSONCodeBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*\\{\\s*\"version\":\\s*\"v0\\.9\".*?\\}\\s*```")
-	a2aTagRegex           = regexp.MustCompile("(?s)<a2a_datapart_json>.*?</a2a_datapart_json>")
+	rawJSONCodeBlockRegex = regexp.MustCompile(`(?s)` + "```" + `(?:json)?\s*[\{\[].*?(?:validated_a2ui_json|beginRendering|surfaceUpdate|"version":|"status":).*?[\}\]]\s*` + "```")
+	a2aTagRegex           = regexp.MustCompile(`(?s)<a2a_datapart_json>.*?</a2a_datapart_json>`)
+	surfaceSuffixRegex    = regexp.MustCompile(`-[0-9a-f]{8}$`)
 
 	pendingMu  sync.Mutex
 	pendingMap = make(map[string][]any)
 )
+
+func generateRandomHex(n int) string {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "a1b2c3d4"
+	}
+	return hex.EncodeToString(bytes)
+}
+
+// UniquifySurfaceIDs ensures every A2UI payload has a unique surfaceId to allow multiple interactive cards in a session.
+func UniquifySurfaceIDs(messages []any) []any {
+	if len(messages) == 0 {
+		return messages
+	}
+	suffix := "-" + generateRandomHex(4)
+	mapping := make(map[string]string)
+
+	var collect func(v any)
+	collect = func(v any) {
+		switch t := v.(type) {
+		case map[string]any:
+			if sID, ok := t["surfaceId"].(string); ok && sID != "" {
+				if !surfaceSuffixRegex.MatchString(sID) && mapping[sID] == "" {
+					mapping[sID] = sID + suffix
+				}
+			}
+			for _, val := range t {
+				collect(val)
+			}
+		case []any:
+			for _, val := range t {
+				collect(val)
+			}
+		}
+	}
+
+	var replace func(v any)
+	replace = func(v any) {
+		switch t := v.(type) {
+		case map[string]any:
+			if sID, ok := t["surfaceId"].(string); ok && sID != "" {
+				if newID, exists := mapping[sID]; exists {
+					t["surfaceId"] = newID
+				}
+			}
+			for _, val := range t {
+				replace(val)
+			}
+		case []any:
+			for _, val := range t {
+				replace(val)
+			}
+		}
+	}
+
+	for _, m := range messages {
+		collect(m)
+		replace(m)
+	}
+	return messages
+}
 
 // BuildA2UIDataPart creates a native A2A DataPart map for Gemini Enterprise / Discovery Engine.
 func BuildA2UIDataPart(a2uiMessage any) map[string]any {
@@ -38,8 +102,7 @@ func BuildA2UIDataPart(a2uiMessage any) map[string]any {
 	}
 }
 
-// WrapA2UIDataPartText wraps an A2UI message inside the official A2A DataPart envelope and sentinel tags
-// for legacy text-fallback rendering.
+// WrapA2UIDataPartText wraps an A2UI message inside the official A2A DataPart envelope and sentinel tags.
 func WrapA2UIDataPartText(a2uiMessage any) string {
 	dataPartEnvelope := BuildA2UIDataPart(a2uiMessage)
 	jsonBytes, err := json.Marshal(dataPartEnvelope)
@@ -49,13 +112,35 @@ func WrapA2UIDataPartText(a2uiMessage any) string {
 	return fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(jsonBytes))
 }
 
-// CleanRawJSONText removes raw A2UI JSON code blocks and legacy <a2a_datapart_json> tags from conversational text parts.
+// CleanRawJSONText removes raw A2UI JSON code blocks and tool dump strings from conversational text,
+// while strictly preserving valid <a2a_datapart_json> wire protocol blocks.
 func CleanRawJSONText(text string) string {
 	if text == "" {
 		return ""
 	}
-	cleaned := a2aTagRegex.ReplaceAllString(text, "")
-	cleaned = rawJSONCodeBlockRegex.ReplaceAllString(cleaned, "")
+
+	trimmed := strings.TrimSpace(text)
+	if (strings.HasPrefix(trimmed, `{"status":`) || strings.HasPrefix(trimmed, `{"result":`) ||
+		strings.HasPrefix(trimmed, `{"data":`) || strings.HasPrefix(trimmed, `{"is_sensitive":`)) &&
+		!strings.Contains(text, "<a2a_datapart_json>") {
+		return ""
+	}
+
+	// 1. Extract and protect <a2a_datapart_json> blocks with placeholders
+	var datapartBlocks []string
+	protected := a2aTagRegex.ReplaceAllStringFunc(text, func(m string) string {
+		datapartBlocks = append(datapartBlocks, m)
+		return fmt.Sprintf("__A2A_DATAPART_BLOCK_%d__", len(datapartBlocks)-1)
+	})
+
+	// 2. Strip code blocks containing raw JSON or A2UI keywords
+	cleaned := rawJSONCodeBlockRegex.ReplaceAllString(protected, "")
+
+	// 3. Restore protected <a2a_datapart_json> blocks
+	for i, block := range datapartBlocks {
+		cleaned = strings.ReplaceAll(cleaned, fmt.Sprintf("__A2A_DATAPART_BLOCK_%d__", i), block)
+	}
+
 	return strings.TrimSpace(cleaned)
 }
 
@@ -95,8 +180,8 @@ func getSessionKey(ctx agent.InvocationContext) string {
 	return "default"
 }
 
-// NewA2UIPartsPlugin returns an ADK plugin that captures A2UI tool envelopes
-// and cleans conversational text parts so Gemini Enterprise renders interactive UI cards without raw JSON leaks.
+// NewA2UIPartsPlugin returns an ADK plugin that captures A2UI tool envelopes,
+// creates native A2A DataParts, and cleans conversational text parts so Gemini Enterprise renders interactive UI cards without raw JSON leaks.
 func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 	return plugin.New(plugin.Config{
 		Name: "a2ui_parts_plugin",
@@ -110,13 +195,14 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 			modified := false
 
 			for _, part := range event.Content.Parts {
-				// Clean text parts to avoid showing raw machine JSON or datapart tags in chat bubble
+				// Clean text parts to avoid showing raw machine JSON in chat bubble while preserving <a2a_datapart_json>
 				if part.Text != "" {
 					cleaned := CleanRawJSONText(part.Text)
 					if cleaned != part.Text {
 						modified = true
 						if cleaned != "" {
-							newParts = append(newParts, &genai.Part{Text: cleaned})
+							part.Text = cleaned
+							newParts = append(newParts, part)
 						}
 						continue
 					}
@@ -155,9 +241,18 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 							messages = []any{m}
 						}
 
-						// Store messages for delivery on the model turn in SSE streaming
 						if len(messages) > 0 {
+							messages = UniquifySurfaceIDs(messages)
+							// Store messages for delivery on the model turn in SSE streaming
 							StorePendingA2UIMessages(sessKey, messages)
+
+							// Convert to ADK GenAI Part with <a2a_datapart_json> wrapper
+							for _, msg := range messages {
+								dataPartText := WrapA2UIDataPartText(msg)
+								if dataPartText != "" {
+									newParts = append(newParts, &genai.Part{Text: dataPartText})
+								}
+							}
 						}
 
 						sanitizedResp := make(map[string]any)

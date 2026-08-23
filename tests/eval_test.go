@@ -350,24 +350,35 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 	}
 
 	foundBeginRendering := false
-	foundCreateSurface := false
+	foundSurfaceUpdate := false
 	for _, msg := range pending {
 		msgBytes, _ := json.Marshal(msg)
 		dataStr := string(msgBytes)
 		if strings.Contains(dataStr, "beginRendering") {
 			foundBeginRendering = true
 		}
-		if strings.Contains(dataStr, "createSurface") {
-			foundCreateSurface = true
+		if strings.Contains(dataStr, "surfaceUpdate") {
+			foundSurfaceUpdate = true
 		}
 	}
 
-	if !foundBeginRendering || !foundCreateSurface {
-		t.Fatalf("Expected captured A2UI messages for beginRendering and createSurface (begin=%v, create=%v)",
-			foundBeginRendering, foundCreateSurface)
+	if !foundBeginRendering || !foundSurfaceUpdate {
+		t.Fatalf("Expected captured A2UI messages for beginRendering and surfaceUpdate (begin=%v, update=%v)",
+			foundBeginRendering, foundSurfaceUpdate)
 	}
 
-	t.Logf("✓ A2UIPartsPlugin successfully captured A2UI envelopes and sanitized tool responses for native SSE streaming.")
+	foundDataPartInEvent := false
+	for _, p := range resEvent.Content.Parts {
+		if strings.Contains(p.Text, "<a2a_datapart_json>") && strings.Contains(p.Text, a2ui.A2UIMimeType) {
+			foundDataPartInEvent = true
+			break
+		}
+	}
+	if !foundDataPartInEvent {
+		t.Fatalf("Expected <a2a_datapart_json> Part injected into resEvent.Content.Parts")
+	}
+
+	t.Logf("✓ A2UIPartsPlugin successfully captured A2UI envelopes, injected native A2A DataParts, and sanitized tool responses for native SSE streaming.")
 }
 
 func TestPIIGuardrailRedaction(t *testing.T) {

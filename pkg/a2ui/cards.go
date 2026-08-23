@@ -517,16 +517,176 @@ func BuildBasicCatalogDiscrepancyCard(params DiscrepancyCardParams) []map[string
 				"components": components,
 			},
 		},
+	}
+}
+
+// BuildBasicCatalogHITLCard builds an interactive A2UI basic_catalog card for human-in-the-loop write approval.
+func BuildBasicCatalogHITLCard(params HITLApprovalCardParams) []map[string]any {
+	surfaceID := params.SurfaceID
+	if surfaceID == "" {
+		surfaceID = fmt.Sprintf("hitl-surface-%s", params.MutationID)
+	}
+
+	components := []map[string]any{
 		{
-			"version": "v0.9",
-			"createSurface": map[string]any{
-				"surfaceId": surfaceID,
-				"catalogId": "https://a2ui.org/specification/v0_9/standard_catalog_definition.json",
+			"id": "root",
+			"component": map[string]any{
+				"Card": map[string]any{
+					"child": "main-col",
+				},
 			},
 		},
 		{
-			"version": "v0.9",
-			"updateComponents": map[string]any{
+			"id": "main-col",
+			"component": map[string]any{
+				"Column": map[string]any{
+					"children": map[string]any{
+						"explicitList": []string{
+							"hitl-header-title",
+							"hitl-sub",
+							"hitl-divider-1",
+							"hitl-details",
+							"hitl-divider-2",
+							"hitl-actions-row",
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "hitl-header-title",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "🛡️ Cryptographic Write Authorization Required",
+					},
+					"usageHint": "h2",
+				},
+			},
+		},
+		{
+			"id": "hitl-sub",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("Target: %s | Contract: %s", params.TargetSystem, params.ContractID),
+					},
+					"usageHint": "body",
+				},
+			},
+		},
+		{
+			"id": "hitl-divider-1",
+			"component": map[string]any{
+				"Divider": map[string]any{},
+			},
+		},
+		{
+			"id": "hitl-details",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("• Mutation ID: %s\n• Adjustment Type: %s\n• Credit Amount: $%.2f\n• Cryptographic Signature: %s\n• Authorization TTL: %d seconds",
+							params.MutationID, params.AdjustmentType, params.CreditAmount, params.SignatureHash, params.ExpiresInSec),
+					},
+				},
+			},
+		},
+		{
+			"id": "hitl-divider-2",
+			"component": map[string]any{
+				"Divider": map[string]any{},
+			},
+		},
+		{
+			"id": "hitl-actions-row",
+			"component": map[string]any{
+				"Row": map[string]any{
+					"distribution": "start",
+					"alignment":    "center",
+					"children": map[string]any{
+						"explicitList": []string{
+							"btn-approve-mutation",
+							"btn-reject-mutation",
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-approve-mutation",
+			"component": map[string]any{
+				"Button": map[string]any{
+					"child":   "btn-approve-text",
+					"variant": "primary",
+					"action": map[string]any{
+						"name":   "SubmitPrompt",
+						"prompt": fmt.Sprintf("Approve and execute signed mutation %s with signature %s", params.MutationID, params.SignatureHash),
+						"context": []map[string]any{
+							{
+								"key": "prompt",
+								"value": map[string]any{
+									"literalString": fmt.Sprintf("Approve and execute signed mutation %s with signature %s", params.MutationID, params.SignatureHash),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-approve-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "✅ Authorize & Commit Mutation",
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-reject-mutation",
+			"component": map[string]any{
+				"Button": map[string]any{
+					"child":   "btn-reject-text",
+					"variant": "default",
+					"action": map[string]any{
+						"name":   "SubmitPrompt",
+						"prompt": fmt.Sprintf("Reject mutation %s", params.MutationID),
+						"context": []map[string]any{
+							{
+								"key": "prompt",
+								"value": map[string]any{
+									"literalString": fmt.Sprintf("Reject mutation %s", params.MutationID),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-reject-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "❌ Reject Mutation",
+					},
+				},
+			},
+		},
+	}
+
+	return []map[string]any{
+		{
+			"beginRendering": map[string]any{
+				"surfaceId": surfaceID,
+				"root":      "root",
+				"catalogId": "https://a2ui.org/specification/v0_8/standard_catalog_definition.json",
+			},
+		},
+		{
+			"surfaceUpdate": map[string]any{
 				"surfaceId":  surfaceID,
 				"components": components,
 			},
