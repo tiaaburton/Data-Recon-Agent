@@ -1,0 +1,8 @@
+# ==============================================================================
+# Agent Gateway Spec: Client-to-Agent (Ingress) Mode
+# ==============================================================================
+name: data-recon-ingress-gateway
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: CLIENT_TO_AGENT

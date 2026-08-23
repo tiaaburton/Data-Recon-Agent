@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// LoadEnvFile reads a key=value env file and injects unset variables into os.Environ.
+// LoadEnvFile reads a key=value env file and injects variables into os.Environ.
 func LoadEnvFile(path string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -24,10 +24,33 @@ func LoadEnvFile(path string) {
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) == 2 {
 			k := strings.TrimSpace(parts[0])
-			v := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
-			if os.Getenv(k) == "" {
-				os.Setenv(k, v)
+			valPart := strings.TrimSpace(parts[1])
+
+			var v string
+			if strings.HasPrefix(valPart, `"`) {
+				// Find closing double quote
+				if endIdx := strings.LastIndex(valPart[1:], `"`); endIdx != -1 {
+					v = valPart[1 : endIdx+1]
+				} else {
+					v = strings.Trim(valPart, `"`)
+				}
+			} else if strings.HasPrefix(valPart, `'`) {
+				// Find closing single quote
+				if endIdx := strings.LastIndex(valPart[1:], `'`); endIdx != -1 {
+					v = valPart[1 : endIdx+1]
+				} else {
+					v = strings.Trim(valPart, `'`)
+				}
+			} else {
+				// Unquoted: strip trailing comment if any
+				if commentIdx := strings.Index(valPart, "#"); commentIdx != -1 {
+					v = strings.TrimSpace(valPart[:commentIdx])
+				} else {
+					v = valPart
+				}
 			}
+
+			os.Setenv(k, v)
 		}
 	}
 }

@@ -1,0 +1,10 @@
+# ==============================================================================
+# Agent Gateway Spec: Agent-to-Anywhere (Egress) Mode
+# ==============================================================================
+name: data-recon-egress-gateway
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - projects/tias-demos/locations/us-central1/registries/default

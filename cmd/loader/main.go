@@ -23,9 +23,9 @@ func main() {
 	nonInteractive := flag.Bool("non-interactive", false, "Disable interactive prompts for missing credentials")
 	flag.Parse()
 
-	// Load local credentials if available
-	envutil.LoadEnvFile(".env.local")
+	// Load local credentials if available (.env first, then .env.local overrides)
 	envutil.LoadEnvFile(".env")
+	envutil.LoadEnvFile(".env.local")
 
 	fmt.Printf("=== Enterprise Data Seeder ===\n")
 	fmt.Printf("Dataset: %s | Target: %s | DryRun: %v\n\n", *inputPath, *target, *dryRun)
@@ -196,6 +196,7 @@ SnowSection:
 		if snowDryRun {
 			fmt.Printf("[DRY-RUN] Simulated loading %d Incidents to %s\n", len(records), snowURL)
 		} else {
+			fmt.Printf("Connecting to %s as user '%s' (password length: %d chars)...\n", snowURL, snowUser, len(snowPass))
 			snowSeeder := seeder.NewServiceNowSeeder(snowURL, snowUser, snowPass)
 			successCount := 0
 			for i, r := range records {

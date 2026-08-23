@@ -1,0 +1,13 @@
+# ==============================================================================
+# Network Security: Authorization Policy targeting Agent Gateway
+# ==============================================================================
+name: data-recon-iap-authz-policy
+target:
+  resources:
+    - "projects/tias-demos/locations/us-central1/agentGateways/data-recon-egress-gateway"
+policyProfile: REQUEST_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/tias-demos/locations/us-central1/authzExtensions/data-recon-iap-authz-ext"

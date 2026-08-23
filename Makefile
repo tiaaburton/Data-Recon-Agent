@@ -16,6 +16,25 @@ RED     := \033[31m
 RESET   := \033[0m
 BOLD    := \033[1m
 
+# Include environment variables from .env and .env.local
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+ifneq (,$(wildcard .env.local))
+    include .env.local
+    export
+endif
+
+# Map GCP Project / Cloud variables dynamically from .env / .env.local
+PROJECT_ID       ?= $(GCP_PROJECT_ID)
+REGION           ?= $(GCP_REGION)
+LOCATION         ?= $(GCP_LOCATION)
+SERVICE_NAME     ?= $(SERVICE_NAME)
+PORT             ?= $(PORT)
+GEMINI_MODEL     ?= $(GEMINI_MODEL)
+ARTIFACTS_BUCKET ?= $(ARTIFACTS_BUCKET)
+
 # Configurable parameter defaults
 COUNT      ?= 500
 OUTPUT     ?= data/correlated_recon_500.json
@@ -29,15 +48,17 @@ help: ## Show this help message and target descriptions
 	@echo -e "$(BOLD)$(CYAN)Enterprise Data Reconciliation Agent — Makefile Targets$(RESET)"
 	@echo -e "$(YELLOW)Usage:$(RESET) make [target] [OPTION=value]"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(RESET) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-24s$(RESET) %s\n", $$1, $$2}'
 	@echo ""
 	@echo -e "$(YELLOW)Example Commands:$(RESET)"
 	@echo -e "  make setup-env                       # Interactive configuration for .env.local"
 	@echo -e "  make synth COUNT=500                 # Generate 500 correlated records"
-	@echo -e "  make seed-dry-run                    # Simulate seeding without API calls"
-	@echo -e "  make seed-sample LIMIT=5             # Load 5 test records into SFDC and ServiceNow"
-	@echo -e "  make seed                            # Load all records (prompts with choices if credentials missing)"
+	@echo -e "  make seed                            # Load all records into Salesforce and ServiceNow"
 	@echo -e "  make verify                          # Validate live record count and correlation"
+	@echo -e "  make run-agent CONTRACT=CTR-2026-001 # Stream A2UI v0.9 reconciliation card"
+	@echo -e "  make agent-runtime                   # Start/Deploy Go ADK Agent Runtime via .env"
+	@echo -e "  make gemini-enterprise               # Connect Go ADK Agent Runtime to Gemini Enterprise"
+	@echo ""
 
 # ------------------------------------------------------------------------------
 # 0. Environment & Credentials Setup
@@ -83,9 +104,9 @@ seed-dry-run: ## Simulate multi-system insertion without making live API calls
 	@go run cmd/loader/main.go --input=$(OUTPUT) --target=all --dry-run=true
 
 .PHONY: seed-sample
-seed-sample: ## Seed a small sample (default 5 records) into Salesforce and ServiceNow
-	@echo -e "$(CYAN)--> Seeding sample batch ($(if $(filter 0,$(LIMIT)),5,$(LIMIT)) records) to Salesforce & ServiceNow...$(RESET)"
-	@go run cmd/loader/main.go --input=$(OUTPUT) --target=all --limit=$(if $(filter 0,$(LIMIT)),5,$(LIMIT))
+seed-sample: ## Seed a small sample (default 5 records) into Salesforce and ServiceNow (Usage: make seed-sample TARGET=servicenow LIMIT=5)
+	@echo -e "$(CYAN)--> Seeding sample batch ($(if $(filter 0,$(LIMIT)),5,$(LIMIT)) records) to $(TARGET)...$(RESET)"
+	@go run cmd/loader/main.go --input=$(OUTPUT) --target=$(TARGET) --limit=$(if $(filter 0,$(LIMIT)),5,$(LIMIT))
 
 .PHONY: seed
 seed: ## Seed all dataset records (prompts with interactive choices if credentials missing)
@@ -167,3 +188,61 @@ clean: synth-clean ## Clean built binaries and temporary artifacts
 	@echo -e "$(YELLOW)--> Cleaning binaries in bin/...$(RESET)"
 	@rm -rf bin/
 	@echo -e "$(GREEN)Clean complete.$(RESET)"
+
+# ------------------------------------------------------------------------------
+# 7. Agent Engine Runtime & Gemini Enterprise Integration (Go ADK 2.0 / A2A)
+# ------------------------------------------------------------------------------
+
+.PHONY: deploy deploy-agent-runtime
+deploy: deploy-agent-runtime ## Alias for deploy-agent-runtime
+deploy-agent-runtime: ## Deploy Go ADK 2.0 Agent to Vertex AI Agent Engine using adkgo
+	@chmod +x scripts/deploy_agent_engine.sh
+	@./scripts/deploy_agent_engine.sh
+
+.PHONY: agent-runtime
+agent-runtime: ## Execute the Go ADK 2.0 Agent Runtime with Vertex AI Agent Engine integration
+	@echo -e "$(CYAN)--> Starting Go ADK 2.0 Agent Runtime ($(SERVICE_NAME))...$(RESET)"
+	@echo -e "  Project:         $(PROJECT_ID)"
+	@echo -e "  Region:          $(REGION)"
+	@echo -e "  Model:           $(GEMINI_MODEL)"
+	@echo -e "  Telemetry:       Cloud Trace / Cloud Logging (ADK_TELEMETRY_ENABLED=1)"
+	@go run cmd/agent/main.go --contract=$(CONTRACT)
+
+.PHONY: gemini-enterprise register-agent
+register-agent: gemini-enterprise ## Alias for gemini-enterprise
+gemini-enterprise: ## Register & connect Go ADK Agent to Gemini Enterprise Agent Platform and Agent Gateway
+	@echo -e "$(CYAN)--> Enabling Agent Registry and Discovery Engine APIs on project $(PROJECT_ID)...$(RESET)"
+	@gcloud services enable agentregistry.googleapis.com discoveryengine.googleapis.com --project=$(PROJECT_ID)
+	@echo -e "$(CYAN)--> Registering and enabling Data Recon Agent in Gemini Enterprise Agent Gateway...$(RESET)"
+	@bash scripts/register_gemini_enterprise.sh
+	@echo -e "$(GREEN)✓ Successfully connected Go ADK Agent Runtime to Gemini Enterprise & Agent Gateway!$(RESET)"
+
+.PHONY: gateway-setup gateway-status gateway-bind register-endpoints
+gateway-setup: ## Provision Agent Gateway, Service Extensions, and Agent Registry via IaC manifests
+	@echo -e "$(CYAN)--> Provisioning Google Cloud Agent Gateway & Agent Registry (IaC)...$(RESET)"
+	@bash scripts/setup_agent_gateway.sh
+
+gateway-status: ## Check Agent Gateway configuration, Reasoning Engine bindings, and registered endpoints
+	@echo -e "$(CYAN)--> Checking Agent Gateway Status...$(RESET)"
+	@gcloud network-services agent-gateways list --location=$(REGION) --project=$(PROJECT_ID) || true
+	@echo -e "$(CYAN)--> Checking Reasoning Engine Gateway Binding...$(RESET)"
+	@curl -s -H "Authorization: Bearer $$(gcloud auth print-access-token)" \
+		"https://$(REGION)-aiplatform.googleapis.com/v1/projects/$(PROJECT_ID)/locations/$(REGION)/reasoningEngines/$(AGENT_ENGINE_ID)" | \
+		python3 -c "import sys, json; data=json.load(sys.stdin); print(json.dumps(data.get('spec', {}).get('deploymentSpec', {}).get('agentGatewayConfig'), indent=2))" || true
+	@echo -e "$(CYAN)--> Checking Registered Services in Agent Registry...$(RESET)"
+	@gcloud agent-registry services list --location=$(REGION) --project=$(PROJECT_ID) || true
+
+register-endpoints: ## Register Salesforce, ServiceNow, and Vertex AI endpoints in Agent Registry
+	@echo -e "$(CYAN)--> Registering External Dependencies in Agent Registry ($(REGION))...$(RESET)"
+	@gcloud agent-registry services create salesforce-revenue-cloud \
+		--project=$(PROJECT_ID) --location=$(REGION) \
+		--display-name="Salesforce Dev Org (Revenue Cloud)" \
+		--endpoint-spec-type=no-spec \
+		--interfaces="url=https://orgfarm-b2f2a8eb8d-dev-ed.develop.my.salesforce.com,protocolBinding=https" || true
+	@gcloud agent-registry services create servicenow-itsm \
+		--project=$(PROJECT_ID) --location=$(REGION) \
+		--display-name="ServiceNow Dev Instance (ITSM Incidents)" \
+		--endpoint-spec-type=no-spec \
+		--interfaces="url=https://dev410998.service-now.com,protocolBinding=https" || true
+
+

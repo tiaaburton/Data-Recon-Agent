@@ -9,15 +9,15 @@ import (
 
 // RenderDiscrepancyCardArgs defines the typed input schema for the LLM tool.
 type RenderDiscrepancyCardArgs struct {
-	ContractID       string  `json:"contract_id" jsonschema:"description=The canonical contract identifier, e.g. CTR-2026-001"`
-	AccountName      string  `json:"account_name" jsonschema:"description=The legal name of the enterprise customer"`
-	ServiceNowINC    string  `json:"servicenow_inc_id" jsonschema:"description=The correlated ServiceNow dispute incident number, e.g. INC0010042"`
-	BilledAmount     float64 `json:"billed_amount" jsonschema:"description=The total billed invoice amount from Salesforce"`
-	AgreedCap        float64 `json:"agreed_cap" jsonschema:"description=The contractually agreed spend cap"`
-	VarianceAmount   float64 `json:"variance_amount" jsonschema:"description=The mathematical discrepancy amount"`
-	Severity         string  `json:"severity" jsonschema:"description=Classification: CRITICAL, HIGH, MEDIUM, LOW"`
-	DiscrepancyCause string  `json:"discrepancy_cause" jsonschema:"description=Synthesized root cause explanation"`
-	Recommendation   string  `json:"recommendation" jsonschema:"description=Actionable resolution advice"`
+	ContractID       string  `json:"contract_id" doc:"The canonical contract identifier, e.g. CTR-2026-001"`
+	AccountName      string  `json:"account_name" doc:"The legal name of the enterprise customer"`
+	ServiceNowINC    string  `json:"servicenow_inc_id" doc:"The correlated ServiceNow dispute incident number, e.g. INC0010042"`
+	BilledAmount     float64 `json:"billed_amount" doc:"The total billed invoice amount from Salesforce"`
+	AgreedCap        float64 `json:"agreed_cap" doc:"The contractually agreed spend cap"`
+	VarianceAmount   float64 `json:"variance_amount" doc:"The mathematical discrepancy amount"`
+	Severity         string  `json:"severity" doc:"Classification: CRITICAL, HIGH, MEDIUM, LOW"`
+	DiscrepancyCause string  `json:"discrepancy_cause" doc:"Synthesized root cause explanation"`
+	Recommendation   string  `json:"recommendation" doc:"Actionable resolution advice"`
 }
 
 // RenderDiscrepancyCardResult is the returned A2UI payload.

@@ -83,8 +83,14 @@ make verify
 # 5. Run the Go Reconciliation Agent & stream A2UI v0.9 cards
 make run-agent CONTRACT=CTR-2026-001
 
-# 6. Run test suites and compile binaries
-make test                    # Run package tests
+# 6. Deploy to Vertex AI Agent Engine & Gemini Enterprise Gateway
+make deploy                  # Deploy Go ADK 2.0 runtime to Agent Engine
+make gateway-setup           # Provision Agent Gateway & Agent Registry (IaC)
+make register-agent          # Connect & enable agent in Gemini Enterprise Gateway
+make gateway-status          # Validate live bindings and registered endpoints
+
+# 7. Run test suites and compile binaries
+make test                    # Run package tests & golden evaluation benchmarks
 make build                   # Compile bin/synth, bin/loader, bin/verifier, bin/agent
 ```
 
@@ -94,6 +100,7 @@ make build                   # Compile bin/synth, bin/loader, bin/verifier, bin/
 
 All architectural design documents, runbooks, specifications, and scorecards are available in the [`docs/`](docs/) directory:
 
+- 🛡️ **[Agent Gateway & Agent Registry IaC](docs/agent_gateway_iac.md)** — Declarative Agent Gateway (Ingress/Egress), Service Extensions, IAP policies, and Agent Registry.
 - 🏛️ **[System Architecture & RFC/TDD](docs/architecture.md)** — Detailed C4 container diagrams, sequence flows, and system boundaries.
 - 🎯 **[Critical User Journeys (CUJs) & Scenario Catalog](docs/critical_user_journeys.md)** — 5 real enterprise scenarios for *Apex Global Cloud Services*, personas, natural language prompts, and A2UI results.
 - 🤖 **[Gemini Enterprise Integration Guide](docs/gemini_enterprise_integration.md)** — Extension manifests, OpenAPI 3.0 tool schemas, OIDC authentication, and streaming A2UI custom catalog rendering.

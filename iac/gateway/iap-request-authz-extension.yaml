@@ -1,0 +1,10 @@
+# ==============================================================================
+# Service Extension: IAP Request Authorization Extension (Audit-Only / DRY_RUN)
+# ==============================================================================
+name: data-recon-iap-authz-ext
+service: iap.googleapis.com
+failOpen: true
+timeout: 1s
+metadata:
+  iamEnforcementMode: "DRY_RUN"
+  iapPolicyVersion: "V1"

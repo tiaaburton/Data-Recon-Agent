@@ -30,7 +30,7 @@ type CoordinatorEngine struct {
 // NewCoordinatorEngine creates a new reconciliation coordinator.
 func NewCoordinatorEngine(model string) *CoordinatorEngine {
 	if model == "" {
-		model = "gemini-3.7-flash-preview"
+		model = "gemini-3.7-flash"
 	}
 	return &CoordinatorEngine{Model: model}
 }
