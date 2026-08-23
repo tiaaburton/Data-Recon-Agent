@@ -54,7 +54,7 @@ jobs:
 
       - name: Run Test Suite & Golden Evaluation Benchmarks
         run: |
-          go test -v -race -coverprofile=coverage.out -covermode=atomic ./tests/... ./pkg/...
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./pkg/... ./tests/...
 
       - name: Upload Test Coverage
         uses: actions/upload-artifact@v4
