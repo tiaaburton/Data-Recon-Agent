@@ -91,11 +91,10 @@ func TestNonByteSlicesAreStillArrays(t *testing.T) {
 	}
 }
 
-// TestA2UIDataPartConvertsToNativeA2APart verifies that A2UI inline_data parts
-// are transformed into native A2A DataPart envelopes (kind: "data") so Discovery Engine
-// does not treat them as unsupported file attachments.
-func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
-	rawPayload := `<a2a_datapart_json>{"version":"v0.9","createSurface":{"surfaceId":"test-surface","catalogId":"https://a2ui.org/specification/v0_9/basic_catalog.json"}}</a2a_datapart_json>`
+// TestA2UIInlineDataSerializesCorrectly verifies that A2UI inline_data parts
+// are serialized cleanly with base64 encoding and application/json+a2ui mime type.
+func TestA2UIInlineDataSerializesCorrectly(t *testing.T) {
+	rawPayload := `<a2a_datapart_json>{"beginRendering":{"surfaceId":"test-surface","root":"root","catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}</a2a_datapart_json>`
 	content := &genai.Content{
 		Role: "model",
 		Parts: []*genai.Part{
@@ -124,28 +123,26 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	// Must NOT contain inline_data (which GE treats as a file upload/attachment)
-	if _, hasInline := part["inline_data"]; hasInline {
-		t.Fatalf("part still contains inline_data! Gemini Enterprise will treat this as an unsupported file attachment")
-	}
-
-	// Must be kind: "data" with metadata and parsed JSON data object
-	if part["kind"] != "data" {
-		t.Fatalf("expected kind='data', got: %v", part["kind"])
-	}
-
-	metadata, ok := part["metadata"].(map[string]any)
-	if !ok || metadata["mimeType"] != "application/json+a2ui" {
-		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", part["metadata"])
-	}
-
-	dataObj, ok := part["data"].(map[string]any)
+	inlineData, ok := part["inline_data"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected data object, got: %T", part["data"])
+		t.Fatalf("expected inline_data map, got: %#v", part)
 	}
 
-	createSurface, ok := dataObj["createSurface"].(map[string]any)
-	if !ok || createSurface["surfaceId"] != "test-surface" {
-		t.Fatalf("expected createSurface.surfaceId='test-surface', got: %#v", dataObj)
+	if inlineData["mime_type"] != "application/json+a2ui" {
+		t.Fatalf("expected mime_type='application/json+a2ui', got: %v", inlineData["mime_type"])
+	}
+
+	dataStr, ok := inlineData["data"].(string)
+	if !ok || len(dataStr) == 0 {
+		t.Fatalf("expected non-empty data string, got: %#v", inlineData["data"])
+	}
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(dataStr)
+	if err != nil {
+		t.Fatalf("failed to decode base64 data: %v", err)
+	}
+
+	if string(decodedBytes) != rawPayload {
+		t.Fatalf("expected decoded data %q, got %q", rawPayload, string(decodedBytes))
 	}
 }

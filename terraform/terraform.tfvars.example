@@ -1,3 +1,13 @@
 project_id      = "tias-demos"
+project_number  = "14200540645"
 region          = "us-central1"
 agent_engine_id = "1487588105090236416"
+trust_domain    = "agents.global.org-14200540645.system.id.goog"
+
+# Declarative Secret Payloads for Google Cloud Secret Manager (managed via Terraform)
+# secret_data = {
+#   "salesforce-password"   = "..."
+#   "servicenow-password"   = "..."
+#   "hitl-signing-secret"   = "..."
+#   "google-api-key"        = "..."
+# }

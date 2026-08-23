@@ -17,8 +17,16 @@ variable "secrets" {
     "salesforce-password",
     "servicenow-username",
     "servicenow-password",
-    "jwt-signing-key"
+    "hitl-signing-secret",
+    "jwt-signing-key",
+    "google-api-key"
   ]
+}
+
+variable "secret_data" {
+  type        = map(string)
+  description = "Optional map of initial secret payloads"
+  default     = {}
 }
 
 resource "google_secret_manager_secret" "secrets" {
@@ -29,6 +37,12 @@ resource "google_secret_manager_secret" "secrets" {
   replication {
     auto {}
   }
+}
+
+resource "google_secret_manager_secret_version" "versions" {
+  for_each    = toset(var.secrets)
+  secret      = google_secret_manager_secret.secrets[each.key].id
+  secret_data = lookup(var.secret_data, each.key, "bootstrap-secret-placeholder")
 }
 
 output "secret_ids" {

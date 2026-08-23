@@ -14,7 +14,7 @@ import (
 //
 // Update it only after re-diffing against the new upstream tree and carrying
 // the patch forward.
-const forkedFromADKVersion = "v2.0.0"
+const forkedFromADKVersion = "v2.2.0"
 
 // TestForkIsStillAgainstTheRecordedADKVersion catches silent drift.
 //

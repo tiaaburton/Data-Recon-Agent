@@ -18,9 +18,14 @@ output "storage_bucket_url" {
   description = "Cloud Storage bucket for datasets and artifacts"
 }
 
-output "agent_service_account" {
-  value       = module.iam.agent_service_account_email
-  description = "Dedicated runtime Service Account for Data Recon Agent"
+output "agent_spiffe_id" {
+  value       = module.iam.agent_spiffe_id
+  description = "Cryptographic SPIFFE URI of the Agent Identity"
+}
+
+output "agent_principal" {
+  value       = module.iam.agent_principal
+  description = "IAM Principal identifier for the Agent Identity"
 }
 
 output "gateway_name" {

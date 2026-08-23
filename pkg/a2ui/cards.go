@@ -241,195 +241,234 @@ func BuildBasicCatalogDiscrepancyCard(params DiscrepancyCardParams) []map[string
 
 	components := []map[string]any{
 		{
-			"id":        "root",
-			"component": "Card",
-			"child":     "main-col",
-		},
-		{
-			"id":        "main-col",
-			"component": "Column",
-			"children": map[string]any{
-				"explicitList": []string{
-					"header-title",
-					"account-sub",
-					"diff-divider",
-					"diff-header",
-					"diff-details",
-					"root-cause-divider",
-					"root-cause-header",
-					"root-cause-text",
-					"actions-divider",
-					"actions-header",
-					"actions-row",
+			"id": "root",
+			"component": map[string]any{
+				"Card": map[string]any{
+					"child": "main-col",
 				},
 			},
 		},
 		{
-			"id":        "header-title",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": fmt.Sprintf("🚨 %s Billing Variance: +$%.2f", params.Severity, params.VarianceAmount),
-			},
-			"variant": "h2",
-		},
-		{
-			"id":        "account-sub",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": fmt.Sprintf("Contract: %s | Account: %s", params.ContractID, params.AccountName),
-			},
-			"variant": "body",
-		},
-		{
-			"id":        "diff-divider",
-			"component": "Divider",
-		},
-		{
-			"id":        "diff-header",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "📊 Cross-System Comparison",
-			},
-			"variant": "h3",
-		},
-		{
-			"id":        "diff-details",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": fmt.Sprintf("• Salesforce CRM Billed: $%.2f\n• ServiceNow ITSM Cap: $%.2f\n• Variance Delta: +$%.2f\n• Ticket: %s", params.BilledAmount, params.AgreedCap, params.VarianceAmount, params.ServiceNowINC),
-			},
-			"variant": "body",
-		},
-		{
-			"id":        "root-cause-divider",
-			"component": "Divider",
-		},
-		{
-			"id":        "root-cause-header",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "🔍 Root Cause & Recommendation",
-			},
-			"variant": "h3",
-		},
-		{
-			"id":        "root-cause-text",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": fmt.Sprintf("%s\n\nRecommendation: %s", params.DiscrepancyCause, params.Recommendation),
-			},
-			"variant": "body",
-		},
-		{
-			"id":        "actions-divider",
-			"component": "Divider",
-		},
-		{
-			"id":        "actions-header",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "⚡ One-Click Resolution Actions:",
-			},
-			"variant": "h3",
-		},
-		{
-			"id":           "actions-row",
-			"component":    "Row",
-			"distribution": "start",
-			"alignment":    "center",
-			"children": map[string]any{
-				"explicitList": []string{
-					"btn-stage-credit",
-					"btn-escalate",
-					"btn-dismiss",
-				},
-			},
-		},
-		{
-			"id":        "btn-stage-credit",
-			"component": "Button",
-			"child":     "btn-stage-credit-text",
-			"variant":   "primary",
-			"action": map[string]any{
-				"name": "SubmitPrompt",
-				"context": []map[string]any{
-					{
-						"key": "prompt",
-						"value": map[string]any{
-							"literalString": fmt.Sprintf("Stage -$%.2f billing adjustment credit in Salesforce Revenue Cloud for contract %s", params.VarianceAmount, params.ContractID),
+			"id": "main-col",
+			"component": map[string]any{
+				"Column": map[string]any{
+					"children": map[string]any{
+						"explicitList": []string{
+							"header-title",
+							"account-sub",
+							"diff-divider",
+							"diff-details",
+							"root-cause-divider",
+							"root-cause-header",
+							"root-cause-text",
+							"actions-divider",
+							"actions-header",
+							"actions-row",
 						},
 					},
 				},
 			},
 		},
 		{
-			"id":        "btn-stage-credit-text",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "1️⃣ Stage Credit Memo",
+			"id": "header-title",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("🚨 %s Billing Variance: +$%.2f", params.Severity, params.VarianceAmount),
+					},
+					"usageHint": "h2",
+				},
 			},
 		},
 		{
-			"id":        "btn-escalate",
-			"component": "Button",
-			"child":     "btn-escalate-text",
-			"variant":   "default",
-			"action": map[string]any{
-				"name": "SubmitPrompt",
-				"context": []map[string]any{
-					{
-						"key": "prompt",
-						"value": map[string]any{
-							"literalString": fmt.Sprintf("Escalate contract %s to Finance Operations queue", params.ContractID),
+			"id": "account-sub",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("Contract: %s | Account: %s", params.ContractID, params.AccountName),
+					},
+					"usageHint": "body",
+				},
+			},
+		},
+		{
+			"id": "diff-divider",
+			"component": map[string]any{
+				"Divider": map[string]any{},
+			},
+		},
+		{
+			"id": "diff-details",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("• Salesforce CRM Billed: $%.2f\n• ServiceNow ITSM Cap: $%.2f\n• Variance Delta: +$%.2f\n• Dispute Incident: %s", params.BilledAmount, params.AgreedCap, params.VarianceAmount, params.ServiceNowINC),
+					},
+				},
+			},
+		},
+		{
+			"id": "root-cause-divider",
+			"component": map[string]any{
+				"Divider": map[string]any{},
+			},
+		},
+		{
+			"id": "root-cause-header",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "🔍 Root Cause & Recommendation",
+					},
+					"usageHint": "h3",
+				},
+			},
+		},
+		{
+			"id": "root-cause-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": fmt.Sprintf("%s\n\nRecommendation: %s", params.DiscrepancyCause, params.Recommendation),
+					},
+				},
+			},
+		},
+		{
+			"id": "actions-divider",
+			"component": map[string]any{
+				"Divider": map[string]any{},
+			},
+		},
+		{
+			"id": "actions-header",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "⚡ One-Click Resolution Actions:",
+					},
+					"usageHint": "h3",
+				},
+			},
+		},
+		{
+			"id": "actions-row",
+			"component": map[string]any{
+				"Row": map[string]any{
+					"distribution": "start",
+					"alignment":    "center",
+					"children": map[string]any{
+						"explicitList": []string{
+							"btn-stage-credit",
+							"btn-escalate",
+							"btn-dismiss",
 						},
 					},
 				},
 			},
 		},
 		{
-			"id":        "btn-escalate-text",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "2️⃣ Escalate to Finance",
-			},
-		},
-		{
-			"id":        "btn-dismiss",
-			"component": "Button",
-			"child":     "btn-dismiss-text",
-			"variant":   "default",
-			"action": map[string]any{
-				"name": "SubmitPrompt",
-				"context": []map[string]any{
-					{
-						"key": "prompt",
-						"value": map[string]any{
-							"literalString": fmt.Sprintf("Dismiss variance on contract %s as acceptable tolerance", params.ContractID),
+			"id": "btn-stage-credit",
+			"component": map[string]any{
+				"Button": map[string]any{
+					"child":   "btn-stage-credit-text",
+					"variant": "primary",
+					"action": map[string]any{
+						"name": "SubmitPrompt",
+						"context": []map[string]any{
+							{
+								"key": "prompt",
+								"value": map[string]any{
+									"literalString": fmt.Sprintf("Stage -$%.2f billing adjustment credit in Salesforce Revenue Cloud for contract %s", params.VarianceAmount, params.ContractID),
+								},
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			"id":        "btn-dismiss-text",
-			"component": "Text",
-			"text": map[string]any{
-				"literalString": "3️⃣ Dismiss Variance",
+			"id": "btn-stage-credit-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "1️⃣ Stage Credit Memo",
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-escalate",
+			"component": map[string]any{
+				"Button": map[string]any{
+					"child":   "btn-escalate-text",
+					"variant": "default",
+					"action": map[string]any{
+						"name": "SubmitPrompt",
+						"context": []map[string]any{
+							{
+								"key": "prompt",
+								"value": map[string]any{
+									"literalString": fmt.Sprintf("Escalate contract %s to Finance Operations queue", params.ContractID),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-escalate-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "2️⃣ Escalate to Finance",
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-dismiss",
+			"component": map[string]any{
+				"Button": map[string]any{
+					"child":   "btn-dismiss-text",
+					"variant": "default",
+					"action": map[string]any{
+						"name": "SubmitPrompt",
+						"context": []map[string]any{
+							{
+								"key": "prompt",
+								"value": map[string]any{
+									"literalString": fmt.Sprintf("Dismiss variance on contract %s as acceptable tolerance", params.ContractID),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id": "btn-dismiss-text",
+			"component": map[string]any{
+				"Text": map[string]any{
+					"text": map[string]any{
+						"literalString": "3️⃣ Dismiss Variance",
+					},
+				},
 			},
 		},
 	}
 
 	return []map[string]any{
 		{
-			"version": "v0.9",
-			"createSurface": map[string]any{
+			"beginRendering": map[string]any{
 				"surfaceId": surfaceID,
-				"catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json",
+				"root":      "root",
+				"catalogId": "https://a2ui.org/specification/v0_8/standard_catalog_definition.json",
 			},
 		},
 		{
-			"version": "v0.9",
-			"updateComponents": map[string]any{
+			"surfaceUpdate": map[string]any{
 				"surfaceId":  surfaceID,
 				"components": components,
 			},

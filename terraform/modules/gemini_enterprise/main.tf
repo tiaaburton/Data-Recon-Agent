@@ -37,7 +37,7 @@ resource "null_resource" "gemini_enterprise_agent" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      bash "${path.module}/../../scripts/register_gemini_enterprise.sh"
+      bash "${path.root}/../scripts/register_gemini_enterprise.sh" || true
     EOT
   }
 }

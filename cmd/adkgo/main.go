@@ -404,6 +404,17 @@ func (f *deployAgentEngineFlags) deployOnAgentEngine() error {
 	return nil
 }
 
+var secretEnvMappings = map[string]string{
+	"SFDC_PASSWORD":            "salesforce-password",
+	"SALESFORCE_PASSWORD":      "salesforce-password",
+	"SFDC_CLIENT_SECRET":       "salesforce-client-secret",
+	"SALESFORCE_CLIENT_SECRET": "salesforce-client-secret",
+	"SERVICENOW_PASSWORD":      "servicenow-password",
+	"HITL_SIGNING_SECRET":      "hitl-signing-secret",
+	"JWT_SIGNING_KEY":          "jwt-signing-key",
+	"GOOGLE_API_KEY":           "google-api-key",
+}
+
 func (f *deployAgentEngineFlags) deploymentSpec() *aiplatformpb.ReasoningEngineSpec_DeploymentSpec {
 	env := []*aiplatformpb.EnvVar{
 		{Name: "GOOGLE_CLOUD_REGION", Value: f.gcloud.region},
@@ -416,6 +427,18 @@ func (f *deployAgentEngineFlags) deploymentSpec() *aiplatformpb.ReasoningEngineS
 	for _, e := range env {
 		seen[e.Name] = true
 	}
+
+	var secretEnvs []*aiplatformpb.SecretEnvVar
+	secretSeen := map[string]bool{}
+
+	if f.envFile.apiKeySecret != "" {
+		secretEnvs = append(secretEnvs, &aiplatformpb.SecretEnvVar{
+			Name:      "GOOGLE_API_KEY",
+			SecretRef: &aiplatformpb.SecretRef{Secret: f.envFile.apiKeySecret, Version: "latest"},
+		})
+		secretSeen["GOOGLE_API_KEY"] = true
+	}
+
 	for _, kv := range loadEnvFile(f.envFile.envFilePath) {
 		if seen[kv.Name] {
 			continue
@@ -423,17 +446,41 @@ func (f *deployAgentEngineFlags) deploymentSpec() *aiplatformpb.ReasoningEngineS
 		if reservedEnvNames[kv.Name] {
 			continue
 		}
+
+		// If this is a known sensitive credential, route to Secret Manager SecretEnv
+		if secretID, isSecret := secretEnvMappings[kv.Name]; isSecret {
+			if kv.Value == "" {
+				continue
+			}
+			if !secretSeen[kv.Name] {
+				secretSeen[kv.Name] = true
+				secretEnvs = append(secretEnvs, &aiplatformpb.SecretEnvVar{
+					Name:      kv.Name,
+					SecretRef: &aiplatformpb.SecretRef{Secret: secretID, Version: "latest"},
+				})
+			}
+			continue
+		}
+
+		if strings.HasPrefix(kv.Value, "sm://") {
+			secretID := strings.TrimPrefix(kv.Value, "sm://")
+			if !secretSeen[kv.Name] {
+				secretSeen[kv.Name] = true
+				secretEnvs = append(secretEnvs, &aiplatformpb.SecretEnvVar{
+					Name:      kv.Name,
+					SecretRef: &aiplatformpb.SecretRef{Secret: secretID, Version: "latest"},
+				})
+			}
+			continue
+		}
+
 		seen[kv.Name] = true
 		env = append(env, kv)
 	}
 
-	spec := &aiplatformpb.ReasoningEngineSpec_DeploymentSpec{Env: env}
-
-	if f.envFile.apiKeySecret != "" {
-		spec.SecretEnv = []*aiplatformpb.SecretEnvVar{{
-			Name:      "GOOGLE_API_KEY",
-			SecretRef: &aiplatformpb.SecretRef{Secret: f.envFile.apiKeySecret, Version: "latest"},
-		}}
+	spec := &aiplatformpb.ReasoningEngineSpec_DeploymentSpec{
+		Env:       env,
+		SecretEnv: secretEnvs,
 	}
 	return spec
 }

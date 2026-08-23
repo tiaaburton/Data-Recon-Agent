@@ -34,10 +34,15 @@ rm -rf bin/
 echo "📦 Resolving Go module dependencies..."
 go mod tidy
 
-# Execute adkgo deploy agentengine via patched adkgo CLI
+ENV_FILE=".env"
+if [ -f .env.local ]; then
+  ENV_FILE=".env.local"
+fi
+
+# Execute adkgo deploy agentengine via patched adkgo CLI (uses native Agent Identity)
 echo "🐹 Running adkgo deploy agentengine..."
 go run ./cmd/adkgo \
-  --env_file=".env.local" \
+  --env_file="$ENV_FILE" \
   --project_name="$PROJECT_ID" \
   --region="$REGION" \
   --name="$AGENT_ENGINE_NAME" \

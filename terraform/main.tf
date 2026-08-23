@@ -38,6 +38,8 @@ locals {
     "networkservices.googleapis.com",
     "networksecurity.googleapis.com",
     "agentregistry.googleapis.com",
+    "agentidentity.googleapis.com",
+    "agentidentitycredentials.googleapis.com",
     "discoveryengine.googleapis.com",
     "aiplatform.googleapis.com",
     "compute.googleapis.com",
@@ -87,19 +89,23 @@ module "storage" {
 # 4. Secret Manager Module
 # ------------------------------------------------------------------------------
 module "secrets" {
-  source     = "./modules/secrets"
-  project_id = var.project_id
-  depends_on = [google_project_service.services]
+  source      = "./modules/secrets"
+  project_id  = var.project_id
+  secret_data = var.secret_data
+  depends_on  = [google_project_service.services]
 }
 
 # ------------------------------------------------------------------------------
-# 5. IAM & Service Accounts Module
+# 5. IAM & Agent Identity Module (SPIFFE)
 # ------------------------------------------------------------------------------
 module "iam" {
-  source         = "./modules/iam"
-  project_id     = var.project_id
-  project_number = var.project_number
-  depends_on     = [google_project_service.services]
+  source              = "./modules/iam"
+  project_id          = var.project_id
+  project_number      = var.project_number
+  region              = var.region
+  reasoning_engine_id = var.agent_engine_id
+  trust_domain        = var.trust_domain
+  depends_on          = [google_project_service.services]
 }
 
 # ------------------------------------------------------------------------------

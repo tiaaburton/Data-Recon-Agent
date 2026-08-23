@@ -166,12 +166,13 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 						if ev0, ok := evs[0].(map[string]any); ok {
 							dataParts := make([]any, 0, len(pending))
 							for _, msg := range pending {
+								msgBytes, _ := json.Marshal(msg)
+								payloadWithTag := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
 								dataParts = append(dataParts, map[string]any{
-									"kind": "data",
-									"metadata": map[string]any{
-										"mimeType": a2ui.A2UIMimeType,
+									"inline_data": map[string]any{
+										"mime_type": a2ui.A2UIMimeType,
+										"data":      base64.StdEncoding.EncodeToString([]byte(payloadWithTag)),
 									},
-									"data": msg,
 								})
 							}
 
@@ -186,7 +187,7 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 
 							if targetContent != nil {
 								existingParts, _ := targetContent["parts"].([]any)
-								targetContent["parts"] = append(dataParts, existingParts...)
+								targetContent["parts"] = append(existingParts, dataParts...)
 								targetContent["role"] = "model"
 								ev0["content"] = targetContent
 							} else {
@@ -219,12 +220,13 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 	if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
 		dataParts := make([]any, 0, len(pending))
 		for _, msg := range pending {
+			msgBytes, _ := json.Marshal(msg)
+			payloadWithTag := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
 			dataParts = append(dataParts, map[string]any{
-				"kind": "data",
-				"metadata": map[string]any{
-					"mimeType": a2ui.A2UIMimeType,
+				"inline_data": map[string]any{
+					"mime_type": a2ui.A2UIMimeType,
+					"data":      base64.StdEncoding.EncodeToString([]byte(payloadWithTag)),
 				},
-				"data": msg,
 			})
 		}
 		a2aResp := map[string]any{

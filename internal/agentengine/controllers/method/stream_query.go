@@ -16,6 +16,7 @@ package method
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"iter"
@@ -129,17 +130,18 @@ func (s *streamQueryHandler) streamJSONL(ctx context.Context, rw http.ResponseWr
 				if pending := a2ui.PopPendingA2UIMessages(req.Input.SessionID); len(pending) > 0 {
 					if content, ok := m["content"].(map[string]any); ok {
 						existingParts, _ := content["parts"].([]any)
-						dataParts := make([]any, 0, len(pending)+len(existingParts))
+						dataParts := make([]any, 0, len(pending))
 						for _, msg := range pending {
+							msgBytes, _ := json.Marshal(msg)
+							payloadWithTag := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(msgBytes))
 							dataParts = append(dataParts, map[string]any{
-								"kind": "data",
-								"metadata": map[string]any{
-									"mimeType": a2ui.A2UIMimeType,
+								"inline_data": map[string]any{
+									"mime_type": a2ui.A2UIMimeType,
+									"data":      base64.StdEncoding.EncodeToString([]byte(payloadWithTag)),
 								},
-								"data": msg,
 							})
 						}
-						content["parts"] = append(dataParts, existingParts...)
+						content["parts"] = append(existingParts, dataParts...)
 						content["role"] = "model"
 					}
 				}
