@@ -206,3 +206,72 @@ data: {
   }
 }
 ```
+
+---
+
+## 6. Verified E2E v1 A2UI Wire Protocol & Discovery Engine Streaming
+
+In the production deployment on Vertex AI Reasoning Engine (`streaming_agent_run_with_events`) communicating via Discovery Engine's A2A streaming gateway (`/a2a/v1/message:stream`), the wire protocol operates as follows:
+
+### 6.1. Wire Envelope Shape
+1. **Transport Layer**: The agent emits parts inside `inline_data` with `mime_type: "text/plain"`.
+   - Setting `mime_type: "text/plain"` ensures Discovery Engine and the Gemini Enterprise frontend do not treat the part as an unsupported binary download (`Unsupported attachment`).
+2. **Payload Encoding**: The `data` field of `inline_data` contains the base64-encoded UTF-8 string:
+   ```xml
+   <a2a_datapart_json>{"data": <A2UI_PAYLOAD>, "kind": "data", "metadata": {"mimeType": "application/json+a2ui"}}</a2a_datapart_json>
+   ```
+3. **Frontend Parsing (`adk_web` / `chat.component.ts`)**:
+   - `isA2aDataPart`: Checks `part.inlineData.mimeType === 'text/plain'` and verifies `<a2a_datapart_json>` boundaries after base64 decoding.
+   - `extractA2aDataPartJson`: Parses the unescaped JSON object.
+   - `isA2uiDataPart`: Confirms `kind === 'data'` and `metadata.mimeType === 'application/json+a2ui'`.
+   - `combineA2uiDataParts` & `processA2uiPartIntoMessage`: Merges `beginRendering` and `surfaceUpdate` messages and routes the component tree directly into the Angular A2UI canvas.
+
+### 6.2. Interactive One-Click Turn Flow (`SubmitPrompt`)
+Buttons rendered on the A2UI surface include standard `SubmitPrompt` actions:
+```json
+{
+  "component": {
+    "Button": {
+      "action": {
+        "name": "SubmitPrompt",
+        "prompt": "Stage -$18000.00 billing adjustment credit in Salesforce Revenue Cloud for contract CTR-2026-451",
+        "context": [
+          {
+            "key": "prompt",
+            "value": { "literalString": "Stage -$18000.00 billing adjustment credit in Salesforce Revenue Cloud for contract CTR-2026-451" }
+          }
+        ]
+      },
+      "child": "btn-text-id",
+      "variant": "primary"
+    }
+  }
+}
+```
+When clicked by the operator in Gemini Enterprise, the client submits the prompt into the active session, triggering the agent's tool execution (`stage_credit_memo`) and returning confirmation.
+
+---
+
+## 7. Figma-to-A2UI Custom Component Workflow
+
+To create new custom components from Figma designs:
+
+```
+┌─────────────────┐      ┌─────────────────────────┐      ┌────────────────────────┐
+│  1. Figma Mock  │ ───> │  2. Catalog Schema JSON │ ───> │  3. Angular / Web Comp │
+│  (Tokens & SVGs)│      │  (Props, Slots, Actions)│      │  (Template & CSS)      │
+└─────────────────┘      └─────────────────────────┘      └────────────────────────┘
+                                                                       │
+                                                                       ▼
+┌─────────────────┐      ┌─────────────────────────┐      ┌────────────────────────┐
+│ 6. Verify in    │ <─── │ 5. Deploy to Agent      │ <─── │ 4. Go ADK Synthesizer  │
+│ Gemini App UI   │      │ Engine & Gateway        │      │ (pkg/a2ui/plugin.go)   │
+└─────────────────┘      └─────────────────────────┘      └────────────────────────┘
+```
+
+1. **Step 1: Figma Design & Asset Export**: Design components, icons, badges, and layout states in Figma using standard 8px grid tokens. Export vector badges (e.g. `explosive_badge_v2.svg`) to `assets/figma/`.
+2. **Step 2: Component Catalog Schema Definition**: Define the declarative JSON schema for the component in `assets/a2ui/catalog.json` (specifying accepted properties, child slots, and action bindings).
+3. **Step 3: Client Component Renderer**: Register the component wrapper in the frontend catalog registry (e.g., mapping `"DiscrepancyBadge"` to the rendering template).
+4. **Step 4: Go ADK A2UI Builder**: Implement the constructor in `pkg/a2ui/` to emit the component JSON node during reconciliation.
+5. **Step 5: Deploy**: Run `make deploy` to publish the updated agent to Vertex AI Agent Engine.
+6. **Step 6: Live Verification**: Run `cmd/test_a2a_stream/main.go` and inspect the rendering directly in Gemini Enterprise.
