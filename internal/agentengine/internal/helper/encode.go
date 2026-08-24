@@ -120,8 +120,8 @@ func convertSnake(path, indent string, o any) (any, error) {
 			}
 		}
 
-		// Convert A2UI parts into native A2A DataPart (kind: data) and pure JSON text (without <a2a_datapart_json> XML tags)
-		// while strictly deleting inline_data so Discovery Engine does not treat A2UI as an unsupported file attachment.
+		// Convert A2UI parts into native A2A DataPart (kind: data) with base64 JSON bytes in the data field.
+		// Strips inline_data and text so Discovery Engine emits a native binary A2A DataPart.
 		if inlineData, ok := m["inline_data"].(map[string]any); ok {
 			mimeType, _ := inlineData["mime_type"].(string)
 			if rawData, ok := inlineData["data"].(string); ok {
@@ -139,23 +139,21 @@ func convertSnake(path, indent string, o any) (any, error) {
 					var dataObj any
 					if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
 						delete(m, "inline_data")
+						delete(m, "text")
 						m["kind"] = "data"
 						m["metadata"] = map[string]any{
 							"mimeType": "application/json+a2ui",
 						}
 						// If dataObj is already wrapped in {"kind":"data", "data": ...}, unwrap it
+						var innerPayload any = dataObj
 						if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
 							if innerData, hasData := envelopeMap["data"]; hasData {
-								m["data"] = innerData
-							} else {
-								m["data"] = dataObj
+								innerPayload = innerData
 							}
-						} else {
-							m["data"] = dataObj
 						}
 
-						cleanJSONBytes, _ := json.Marshal(m["data"])
-						m["text"] = string(cleanJSONBytes)
+						cleanJSONBytes, _ := json.Marshal(innerPayload)
+						m["data"] = base64.StdEncoding.EncodeToString(cleanJSONBytes)
 					}
 				}
 			}
@@ -168,22 +166,20 @@ func convertSnake(path, indent string, o any) (any, error) {
 			var dataObj any
 			if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
 				delete(m, "inline_data")
+				delete(m, "text")
 				m["kind"] = "data"
 				m["metadata"] = map[string]any{
 					"mimeType": "application/json+a2ui",
 				}
+				var innerPayload any = dataObj
 				if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
 					if innerData, hasData := envelopeMap["data"]; hasData {
-						m["data"] = innerData
-					} else {
-						m["data"] = dataObj
+						innerPayload = innerData
 					}
-				} else {
-					m["data"] = dataObj
 				}
 
-				cleanJSONBytes, _ := json.Marshal(m["data"])
-				m["text"] = string(cleanJSONBytes)
+				cleanJSONBytes, _ := json.Marshal(innerPayload)
+				m["data"] = base64.StdEncoding.EncodeToString(cleanJSONBytes)
 			}
 		}
 

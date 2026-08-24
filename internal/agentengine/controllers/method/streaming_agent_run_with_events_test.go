@@ -16,6 +16,7 @@ package method
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"iter"
 	"strings"
@@ -415,8 +416,8 @@ func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
 	if !strings.Contains(rawOutput, `"mimeType":"application/json+a2ui"`) {
 		t.Fatalf("expected raw output to contain '\"mimeType\":\"application/json+a2ui\"', got:\n%s", rawOutput)
 	}
-	if !strings.Contains(rawOutput, `createSurface`) {
-		t.Fatalf("expected raw output to contain 'createSurface', got:\n%s", rawOutput)
+	if !strings.Contains(rawOutput, `"data":`) {
+		t.Fatalf("expected raw output to contain '\"data\":', got:\n%s", rawOutput)
 	}
 	if !strings.Contains(rawOutput, `"final response"`) {
 		t.Fatalf("expected raw output to contain 'final response', got:\n%s", rawOutput)
@@ -547,7 +548,15 @@ func TestGeminiEnterpriseApp_WireProtocol(t *testing.T) {
 									t.Fatalf("Expected mimeType %q in data part metadata, got %q", a2ui.A2UIMimeType, mimeType)
 								}
 
-								dataMap, _ := pMap["data"].(map[string]any)
+								var dataMap map[string]any
+								if dm, isMap := pMap["data"].(map[string]any); isMap {
+									dataMap = dm
+								} else if b64Str, isStr := pMap["data"].(string); isStr {
+									if bBytes, err := base64.StdEncoding.DecodeString(b64Str); err == nil {
+										_ = json.Unmarshal(bBytes, &dataMap)
+									}
+								}
+
 								if dataMap != nil {
 									if _, hasBegin := dataMap["beginRendering"]; hasBegin {
 										foundBeginRenderingDataPart = true

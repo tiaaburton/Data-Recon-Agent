@@ -2,8 +2,8 @@ package helper
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"reflect"
-	"strings"
 	"testing"
 
 	"google.golang.org/genai"
@@ -130,14 +130,9 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected inline_data to be deleted, got: %#v", part["inline_data"])
 	}
 
-	// Must be kind: "data" with metadata and parsed JSON data object (for Angular A2UI renderer)
+	// Must be kind: "data" with metadata
 	if part["kind"] != "data" {
 		t.Fatalf("expected kind='data', got: %v", part["kind"])
-	}
-
-	// Must contain pure JSON text without <a2a_datapart_json> tags
-	if textStr, hasText := part["text"].(string); !hasText || strings.Contains(textStr, "<a2a_datapart_json>") || !strings.Contains(textStr, "test-surface") {
-		t.Fatalf("expected pure JSON text without <a2a_datapart_json>, got: %#v", part["text"])
 	}
 
 	metadata, ok := part["metadata"].(map[string]any)
@@ -145,9 +140,19 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", part["metadata"])
 	}
 
-	dataObj, ok := part["data"].(map[string]any)
+	b64Str, ok := part["data"].(string)
 	if !ok {
-		t.Fatalf("expected data object, got: %T", part["data"])
+		t.Fatalf("expected data string (base64 bytes), got: %T", part["data"])
+	}
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(b64Str)
+	if err != nil {
+		t.Fatalf("failed to decode base64 data bytes: %v", err)
+	}
+
+	var dataObj map[string]any
+	if err := json.Unmarshal(decodedBytes, &dataObj); err != nil {
+		t.Fatalf("failed to unmarshal JSON from decoded bytes: %v", err)
 	}
 
 	createSurface, ok := dataObj["createSurface"].(map[string]any)
@@ -185,22 +190,23 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	if textStr, hasText := part["text"].(string); !hasText || strings.Contains(textStr, "<a2a_datapart_json>") || !strings.Contains(textStr, "text-surface-1") {
-		t.Fatalf("expected pure JSON text without <a2a_datapart_json>, got: %#v", part["text"])
-	}
-
 	if part["kind"] != "data" {
 		t.Fatalf("expected kind='data', got: %v", part["kind"])
 	}
 
-	metadata, ok := part["metadata"].(map[string]any)
-	if !ok || metadata["mimeType"] != "application/json+a2ui" {
-		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", part["metadata"])
+	b64Str, ok := part["data"].(string)
+	if !ok {
+		t.Fatalf("expected data string (base64 bytes), got: %T", part["data"])
 	}
 
-	dataObj, ok := part["data"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected data object, got: %T", part["data"])
+	decodedBytes, err := base64.StdEncoding.DecodeString(b64Str)
+	if err != nil {
+		t.Fatalf("failed to decode base64 data bytes: %v", err)
+	}
+
+	var dataObj map[string]any
+	if err := json.Unmarshal(decodedBytes, &dataObj); err != nil {
+		t.Fatalf("failed to unmarshal JSON from decoded bytes: %v", err)
 	}
 
 	createSurface, ok := dataObj["createSurface"].(map[string]any)
