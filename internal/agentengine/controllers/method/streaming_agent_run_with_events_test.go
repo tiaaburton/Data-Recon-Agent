@@ -422,3 +422,223 @@ func TestStreamJSONL_EmitsPendingA2UIDataParts(t *testing.T) {
 		t.Fatalf("expected raw output to contain 'final response', got:\n%s", rawOutput)
 	}
 }
+
+// TestGeminiEnterpriseApp_WireProtocol verifies that Discovery Engine receives valid JSONL SSE lines,
+// where role: "user" is clean and role: "model" carries native A2A DataParts for UI rendering.
+func TestGeminiEnterpriseApp_WireProtocol(t *testing.T) {
+	const (
+		appName           = "data-recon-agent"
+		userID            = "analyst@globex.com"
+		externalSessionID = "projects/14200540645/locations/global/collections/default_collection/engines/data-recon-agent/sessions/test-sess-1"
+	)
+
+	a, err := llmagent.New(llmagent.Config{
+		Name:  "StreamAware",
+		Model: streamAwareLLM{},
+	})
+	if err != nil {
+		t.Fatalf("failed to create agent: %v", err)
+	}
+
+	config := &launcher.Config{
+		AgentLoader:    agent.NewSingleLoader(a),
+		SessionService: session.InMemoryService(),
+	}
+	h := NewStreamingAgentRunWithEventsHandler(config, appName, "streaming_agent_run_with_events", "async_stream")
+
+	// Stage full Basic Catalog A2UI Discrepancy Card
+	card := a2ui.BuildBasicCatalogDiscrepancyCard(a2ui.DiscrepancyCardParams{
+		ContractID:       "CTR-2026-451",
+		AccountName:      "Globex Logistics Corporation",
+		ServiceNowINC:    "INC0010042",
+		BilledAmount:     115000.00,
+		AgreedCap:        97000.00,
+		VarianceAmount:   18000.00,
+		Severity:         "CRITICAL",
+		DiscrepancyCause: "Salesforce billed invoice ($115000.00) exceeds contract spend cap ($97000.00) by $18000.00.",
+		Recommendation:   "Stage -$18000.00 billing adjustment credit in Salesforce Revenue Cloud.",
+		ResolutionAction: "stage_salesforce_billing_adjustment",
+	})
+	cardMsgs := make([]any, 0, len(card))
+	for _, m := range card {
+		cardMsgs = append(cardMsgs, m)
+	}
+	a2ui.StorePendingA2UIMessages("default", cardMsgs)
+
+	requestJSON := `{"message":{"role":"user","parts":[{"text":"Reconcile contract CTR-2026-451"}]},"session_id":"` + externalSessionID + `","user_id":"` + userID + `"}`
+	payload, err := json.Marshal(models.StreamingAgentRunWithEventsRequest{
+		ClassMethod: "streaming_agent_run_with_events",
+		Input: models.StreamingAgentRunWithEventsInput{
+			RequestJSON: requestJSON,
+		},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() failed: %v", err)
+	}
+
+	w := newStringWriter()
+	if err := h.streamJSONL(t.Context(), w, payload); err != nil {
+		t.Fatalf("streamJSONL() failed: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(w.sb.String()), "\n")
+	if len(lines) == 0 {
+		t.Fatalf("Expected non-empty JSONL output from streamJSONL")
+	}
+
+	foundModelTurn := false
+	foundBeginRenderingDataPart := false
+	foundSurfaceUpdateDataPart := false
+	foundSubmitPromptButton := false
+
+	for lineIdx, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var chunk map[string]any
+		if err := json.Unmarshal([]byte(line), &chunk); err != nil {
+			t.Fatalf("Line %d is not valid JSON: %v\nLine content:\n%s", lineIdx, err, line)
+		}
+
+		events, ok := chunk["events"].([]any)
+		if !ok || len(events) == 0 {
+			continue
+		}
+
+		for _, evAny := range events {
+			ev, ok := evAny.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			// Check content role
+			content, _ := ev["content"].(map[string]any)
+			if content == nil {
+				if llmResp, ok := ev["llm_response"].(map[string]any); ok {
+					content, _ = llmResp["content"].(map[string]any)
+				}
+			}
+
+			if content != nil {
+				role, _ := content["role"].(string)
+				parts, _ := content["parts"].([]any)
+
+				if role == "user" {
+					// Verify role: "user" NEVER leaks raw <a2a_datapart_json> text
+					for _, pAny := range parts {
+						if pMap, ok := pAny.(map[string]any); ok {
+							if text, ok := pMap["text"].(string); ok {
+								if strings.Contains(text, "<a2a_datapart_json>") {
+									t.Fatalf("role: 'user' leaked <a2a_datapart_json> text part:\n%s", text)
+								}
+							}
+						}
+					}
+				}
+
+				if role == "model" {
+					foundModelTurn = true
+					for _, pAny := range parts {
+						if pMap, ok := pAny.(map[string]any); ok {
+							if pMap["kind"] == "data" {
+								metadata, _ := pMap["metadata"].(map[string]any)
+								mimeType, _ := metadata["mimeType"].(string)
+								if mimeType != a2ui.A2UIMimeType {
+									t.Fatalf("Expected mimeType %q in data part metadata, got %q", a2ui.A2UIMimeType, mimeType)
+								}
+
+								dataMap, _ := pMap["data"].(map[string]any)
+								if dataMap != nil {
+									if _, hasBegin := dataMap["beginRendering"]; hasBegin {
+										foundBeginRenderingDataPart = true
+									}
+									if su, hasSU := dataMap["surfaceUpdate"].(map[string]any); hasSU {
+										foundSurfaceUpdateDataPart = true
+										if comps, hasComps := su["components"].([]any); hasComps {
+											for _, cAny := range comps {
+												if cMap, isC := cAny.(map[string]any); isC {
+													if compDef, hasC := cMap["component"].(map[string]any); hasC {
+														if btn, hasBtn := compDef["Button"].(map[string]any); hasBtn {
+															if action, hasAct := btn["action"].(map[string]any); hasAct {
+																if action["name"] == "SubmitPrompt" {
+																	foundSubmitPromptButton = true
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if !foundModelTurn {
+		t.Fatalf("Discovery Engine failed: No role: 'model' event found in JSONL stream")
+	}
+	if !foundBeginRenderingDataPart {
+		t.Fatalf("Discovery Engine failed: beginRendering A2A DataPart missing from model event")
+	}
+	if !foundSurfaceUpdateDataPart {
+		t.Fatalf("Discovery Engine failed: surfaceUpdate A2A DataPart missing from model event")
+	}
+	if !foundSubmitPromptButton {
+		t.Fatalf("Discovery Engine failed: SubmitPrompt action button missing from surfaceUpdate component tree")
+	}
+
+	t.Logf("✓ Gemini Enterprise App wire protocol verified: Clean JSONL stream, role: 'model' carries native A2UI DataParts with SubmitPrompt buttons.")
+}
+
+// TestGeminiEnterpriseAgentPlatform_StreamQuery verifies the async_stream_query endpoint used by Agent Platform.
+func TestGeminiEnterpriseAgentPlatform_StreamQuery(t *testing.T) {
+	const (
+		appName = "data-recon-agent"
+		userID  = "tester@google.com"
+	)
+
+	a, err := llmagent.New(llmagent.Config{
+		Name:  "StreamAware",
+		Model: streamAwareLLM{},
+	})
+	if err != nil {
+		t.Fatalf("failed to create agent: %v", err)
+	}
+
+	config := &launcher.Config{
+		AgentLoader:    agent.NewSingleLoader(a),
+		SessionService: session.InMemoryService(),
+	}
+	h := NewStreamQueryHandler(config, appName, "async_stream_query", "async_stream")
+
+	payload, err := json.Marshal(models.StreamQueryRequest{
+		ClassMethod: "async_stream_query",
+		Input: models.StreamQueryInput{
+			Message: genai.Content{
+				Role:  "user",
+				Parts: []*genai.Part{{Text: "Reconcile contract CTR-2026-451"}},
+			},
+			UserID: userID,
+		},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal() failed: %v", err)
+	}
+
+	w := newStringWriter()
+	if err := h.streamJSONL(t.Context(), w, payload); err != nil {
+		t.Fatalf("streamJSONL() failed: %v", err)
+	}
+
+	rawOutput := w.sb.String()
+	if !strings.Contains(rawOutput, "final response") {
+		t.Fatalf("Expected stream query to output final response, got:\n%s", rawOutput)
+	}
+
+	t.Logf("✓ Gemini Enterprise Agent Platform async_stream_query verified.")
+}
