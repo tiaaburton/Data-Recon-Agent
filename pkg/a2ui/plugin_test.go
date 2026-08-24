@@ -24,7 +24,7 @@ import (
 	"google.golang.org/genai"
 )
 
-func TestCleanRawJSONText_ProtectsA2ADataPart(t *testing.T) {
+func TestCleanRawJSONText_PreservesConversationalText(t *testing.T) {
 	msg := map[string]any{
 		"beginRendering": map[string]any{
 			"surfaceId": "test-surface",
@@ -37,8 +37,8 @@ func TestCleanRawJSONText_ProtectsA2ADataPart(t *testing.T) {
 
 	cleaned := CleanRawJSONText(input)
 
-	if !strings.Contains(cleaned, "<a2a_datapart_json>") {
-		t.Fatalf("CleanRawJSONText stripped valid <a2a_datapart_json> block")
+	if !strings.Contains(cleaned, "test-surface") {
+		t.Fatalf("CleanRawJSONText stripped valid JSON payload block")
 	}
 	if !strings.Contains(cleaned, "Here is the discrepancy summary:") {
 		t.Fatalf("CleanRawJSONText lost conversational text")
@@ -234,13 +234,13 @@ func TestA2UIPartsPlugin_EndToEndInterception(t *testing.T) {
 	// 2. Check DataPart injected into parts
 	foundDataPart := false
 	for _, p := range res.Content.Parts {
-		if strings.Contains(p.Text, "<a2a_datapart_json>") && strings.Contains(p.Text, A2UIMimeType) {
+		if strings.Contains(p.Text, "beginRendering") && strings.Contains(p.Text, "recon-surface-CTR-2026-001") {
 			foundDataPart = true
 			break
 		}
 	}
 	if !foundDataPart {
-		t.Fatalf("Expected native <a2a_datapart_json> Part in event.Content.Parts")
+		t.Fatalf("Expected native A2UI JSON Part in event.Content.Parts")
 	}
 
 	// 3. Check text part cleaned of raw JSON code blocks

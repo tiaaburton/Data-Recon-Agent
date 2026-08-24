@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -20,7 +19,6 @@ const A2UIMimeType = "application/json+a2ui"
 
 var (
 	rawJSONCodeBlockRegex = regexp.MustCompile(`(?s)` + "```" + `(?:json)?\s*[\{\[].*?(?:validated_a2ui_json|beginRendering|surfaceUpdate|"version":|"status":).*?[\}\]]\s*` + "```")
-	a2aTagRegex           = regexp.MustCompile(`(?s)<a2a_datapart_json>.*?</a2a_datapart_json>`)
 	surfaceSuffixRegex    = regexp.MustCompile(`-[0-9a-f]{8}$`)
 
 	pendingMu  sync.Mutex
@@ -102,45 +100,28 @@ func BuildA2UIDataPart(a2uiMessage any) map[string]any {
 	}
 }
 
-// WrapA2UIDataPartText wraps an A2UI message inside the official A2A DataPart envelope and sentinel tags.
+// WrapA2UIDataPartText wraps an A2UI message inside JSON text without XML tags.
 func WrapA2UIDataPartText(a2uiMessage any) string {
-	dataPartEnvelope := BuildA2UIDataPart(a2uiMessage)
-	jsonBytes, err := json.Marshal(dataPartEnvelope)
+	jsonBytes, err := json.Marshal(a2uiMessage)
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(jsonBytes))
+	return string(jsonBytes)
 }
 
-// CleanRawJSONText removes raw A2UI JSON code blocks and tool dump strings from conversational text,
-// while strictly preserving valid <a2a_datapart_json> wire protocol blocks.
+// CleanRawJSONText cleans raw debug logs while preserving valid conversational text.
 func CleanRawJSONText(text string) string {
 	if text == "" {
 		return ""
 	}
 
 	trimmed := strings.TrimSpace(text)
-	if (strings.HasPrefix(trimmed, `{"status":`) || strings.HasPrefix(trimmed, `{"result":`) ||
-		strings.HasPrefix(trimmed, `{"data":`) || strings.HasPrefix(trimmed, `{"is_sensitive":`)) &&
-		!strings.Contains(text, "<a2a_datapart_json>") {
+	if strings.HasPrefix(trimmed, `{"status":`) || strings.HasPrefix(trimmed, `{"result":`) ||
+		strings.HasPrefix(trimmed, `{"is_sensitive":`) {
 		return ""
 	}
 
-	// 1. Extract and protect <a2a_datapart_json> blocks with placeholders
-	var datapartBlocks []string
-	protected := a2aTagRegex.ReplaceAllStringFunc(text, func(m string) string {
-		datapartBlocks = append(datapartBlocks, m)
-		return fmt.Sprintf("__A2A_DATAPART_BLOCK_%d__", len(datapartBlocks)-1)
-	})
-
-	// 2. Strip code blocks containing raw JSON or A2UI keywords
-	cleaned := rawJSONCodeBlockRegex.ReplaceAllString(protected, "")
-
-	// 3. Restore protected <a2a_datapart_json> blocks
-	for i, block := range datapartBlocks {
-		cleaned = strings.ReplaceAll(cleaned, fmt.Sprintf("__A2A_DATAPART_BLOCK_%d__", i), block)
-	}
-
+	cleaned := rawJSONCodeBlockRegex.ReplaceAllString(text, "")
 	return strings.TrimSpace(cleaned)
 }
 

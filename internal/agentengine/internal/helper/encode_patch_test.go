@@ -135,9 +135,9 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected kind='data', got: %v", part["kind"])
 	}
 
-	// Must contain text with <a2a_datapart_json> envelope for Angular A2UI parser
-	if textStr, hasText := part["text"].(string); !hasText || !strings.Contains(textStr, "<a2a_datapart_json>") {
-		t.Fatalf("expected text with <a2a_datapart_json>, got: %#v", part["text"])
+	// Must contain pure JSON text without <a2a_datapart_json> tags
+	if textStr, hasText := part["text"].(string); !hasText || strings.Contains(textStr, "<a2a_datapart_json>") || !strings.Contains(textStr, "test-surface") {
+		t.Fatalf("expected pure JSON text without <a2a_datapart_json>, got: %#v", part["text"])
 	}
 
 	metadata, ok := part["metadata"].(map[string]any)
@@ -185,8 +185,8 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	if textStr, hasText := part["text"].(string); !hasText || !strings.Contains(textStr, "<a2a_datapart_json>") {
-		t.Fatalf("expected text to contain <a2a_datapart_json>, got: %#v", part["text"])
+	if textStr, hasText := part["text"].(string); !hasText || strings.Contains(textStr, "<a2a_datapart_json>") || !strings.Contains(textStr, "text-surface-1") {
+		t.Fatalf("expected pure JSON text without <a2a_datapart_json>, got: %#v", part["text"])
 	}
 
 	if part["kind"] != "data" {

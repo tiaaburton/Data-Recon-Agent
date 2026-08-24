@@ -120,7 +120,7 @@ func convertSnake(path, indent string, o any) (any, error) {
 			}
 		}
 
-		// Convert A2UI parts into native A2A DataPart (kind: data) and text sentinel tags (<a2a_datapart_json>)
+		// Convert A2UI parts into native A2A DataPart (kind: data) and pure JSON text (without <a2a_datapart_json> XML tags)
 		// while strictly deleting inline_data so Discovery Engine does not treat A2UI as an unsupported file attachment.
 		if inlineData, ok := m["inline_data"].(map[string]any); ok {
 			mimeType, _ := inlineData["mime_type"].(string)
@@ -130,7 +130,7 @@ func convertSnake(path, indent string, o any) (any, error) {
 				if err != nil || len(decodedBytes) == 0 {
 					payloadStr = rawData
 				}
-				if mimeType == "application/json+a2ui" || strings.Contains(payloadStr, "<a2a_datapart_json>") {
+				if mimeType == "application/json+a2ui" || strings.Contains(payloadStr, "<a2a_datapart_json>") || strings.Contains(payloadStr, "beginRendering") || strings.Contains(payloadStr, "surfaceUpdate") {
 					payloadStr = strings.TrimSpace(payloadStr)
 					payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
 					payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
@@ -154,19 +154,12 @@ func convertSnake(path, indent string, o any) (any, error) {
 							m["data"] = dataObj
 						}
 
-						fullDataPart := map[string]any{
-							"kind": "data",
-							"metadata": map[string]any{
-								"mimeType": "application/json+a2ui",
-							},
-							"data": m["data"],
-						}
-						partJSON, _ := json.Marshal(fullDataPart)
-						m["text"] = fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(partJSON))
+						cleanJSONBytes, _ := json.Marshal(m["data"])
+						m["text"] = string(cleanJSONBytes)
 					}
 				}
 			}
-		} else if textVal, ok := m["text"].(string); ok && strings.Contains(textVal, "<a2a_datapart_json>") {
+		} else if textVal, ok := m["text"].(string); ok && (strings.Contains(textVal, "<a2a_datapart_json>") || strings.Contains(textVal, "beginRendering") || strings.Contains(textVal, "surfaceUpdate") || strings.Contains(textVal, "createSurface")) {
 			payloadStr := strings.TrimSpace(textVal)
 			payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
 			payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
@@ -189,15 +182,8 @@ func convertSnake(path, indent string, o any) (any, error) {
 					m["data"] = dataObj
 				}
 
-				fullDataPart := map[string]any{
-					"kind": "data",
-					"metadata": map[string]any{
-						"mimeType": "application/json+a2ui",
-					},
-					"data": m["data"],
-				}
-				partJSON, _ := json.Marshal(fullDataPart)
-				m["text"] = fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(partJSON))
+				cleanJSONBytes, _ := json.Marshal(m["data"])
+				m["text"] = string(cleanJSONBytes)
 			}
 		}
 

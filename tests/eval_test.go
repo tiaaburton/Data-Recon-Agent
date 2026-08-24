@@ -346,21 +346,21 @@ func TestA2UIPartsPlugin_EmitsDataParts(t *testing.T) {
 
 	foundDataPartInEvent := false
 	for _, p := range resEvent.LLMResponse.Content.Parts {
-		if strings.Contains(p.Text, "<a2a_datapart_json>") && strings.Contains(p.Text, a2ui.A2UIMimeType) {
+		if strings.Contains(p.Text, "beginRendering") && strings.Contains(p.Text, "recon-surface-CTR-2026-451") {
 			foundDataPartInEvent = true
 			break
 		}
 	}
 	if !foundDataPartInEvent && resEvent.Content != nil {
 		for _, p := range resEvent.Content.Parts {
-			if strings.Contains(p.Text, "<a2a_datapart_json>") && strings.Contains(p.Text, a2ui.A2UIMimeType) {
+			if strings.Contains(p.Text, "beginRendering") && strings.Contains(p.Text, "recon-surface-CTR-2026-451") {
 				foundDataPartInEvent = true
 				break
 			}
 		}
 	}
 	if !foundDataPartInEvent {
-		t.Fatalf("Expected <a2a_datapart_json> Part injected into model response parts")
+		t.Fatalf("Expected A2UI JSON Part injected into model response parts")
 	}
 
 	t.Logf("✓ A2UIPartsPlugin successfully captured A2UI envelopes, injected native A2A DataParts, and sanitized tool responses for native SSE streaming.")
