@@ -124,6 +124,8 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 	rw.Header().Set("Connection", "keep-alive")
 	// from this moment on we must not return error. Instead, it should be handled by using helper.EmitJSONError
 
+	var activeA2UIDataParts []any
+
 	for event, err := range events {
 		log.Printf("Processing event: %+v err: %+v\n", event, err)
 		if err != nil {
@@ -159,16 +161,17 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 				}
 			}
 
-			// If this is a model turn, inject pending A2UI DataParts into events[0].content.parts
+			// If this is a model turn, collect pending A2UI DataParts and persist across all stream chunks
 			if !hasFuncResp {
 				if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
+					for _, msg := range pending {
+						activeA2UIDataParts = append(activeA2UIDataParts, a2ui.BuildA2UIDataPart(msg))
+					}
+				}
+
+				if len(activeA2UIDataParts) > 0 {
 					if evs, ok := m["events"].([]any); ok && len(evs) > 0 {
 						if ev0, ok := evs[0].(map[string]any); ok {
-							dataParts := make([]any, 0, len(pending))
-							for _, msg := range pending {
-								dataParts = append(dataParts, a2ui.BuildA2UIDataPart(msg))
-							}
-
 							var targetContent map[string]any
 							if content, ok := ev0["content"].(map[string]any); ok && content != nil {
 								targetContent = content
@@ -180,7 +183,7 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 
 							if targetContent != nil {
 								existingParts, _ := targetContent["parts"].([]any)
-								targetContent["parts"] = append(existingParts, dataParts...)
+								targetContent["parts"] = append(existingParts, activeA2UIDataParts...)
 								targetContent["role"] = "model"
 								ev0["content"] = targetContent
 								if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {
@@ -189,7 +192,7 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 							} else {
 								ev0["content"] = map[string]any{
 									"role":  "model",
-									"parts": dataParts,
+									"parts": activeA2UIDataParts,
 								}
 								if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {
 									llmResp["content"] = ev0["content"]
@@ -217,29 +220,32 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 		}
 	}
 
-	// Guarantee that any pending A2UI visual cards are emitted before the stream closes
-	if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
-		dataParts := make([]any, 0, len(pending))
-		for _, msg := range pending {
-			dataParts = append(dataParts, a2ui.BuildA2UIDataPart(msg))
+	// Guarantee that any pending A2UI visual cards are emitted before the stream closes if not yet attached to a model turn
+	if len(activeA2UIDataParts) == 0 {
+		if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
+			for _, msg := range pending {
+				activeA2UIDataParts = append(activeA2UIDataParts, a2ui.BuildA2UIDataPart(msg))
+			}
 		}
-		a2aResp := map[string]any{
-			"session_id": runReq.SessionID,
-			"events": []any{
-				map[string]any{
-					"author": "data_recon_agent",
-					"content": map[string]any{
-						"role":  "model",
-						"parts": dataParts,
+		if len(activeA2UIDataParts) > 0 {
+			a2aResp := map[string]any{
+				"session_id": runReq.SessionID,
+				"events": []any{
+					map[string]any{
+						"author": "data_recon_agent",
+						"content": map[string]any{
+							"role":  "model",
+							"parts": activeA2UIDataParts,
+						},
+						"id":        fmt.Sprintf("a2ui-%d", time.Now().UnixNano()),
+						"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 					},
-					"id":        fmt.Sprintf("a2ui-%d", time.Now().UnixNano()),
-					"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 				},
-			},
+			}
+			enc := json.NewEncoder(rw)
+			enc.SetEscapeHTML(false)
+			_ = enc.Encode(a2aResp)
 		}
-		enc := json.NewEncoder(rw)
-		enc.SetEscapeHTML(false)
-		_ = enc.Encode(a2aResp)
 	}
 
 	return nil
