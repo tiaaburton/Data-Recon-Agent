@@ -125,6 +125,7 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 	// from this moment on we must not return error. Instead, it should be handled by using helper.EmitJSONError
 
 	var activeA2UIDataParts []any
+	var modelTurnEmitted bool
 
 	for event, err := range events {
 		log.Printf("Processing event: %+v err: %+v\n", event, err)
@@ -163,6 +164,7 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 
 			// If this is a model turn, collect pending A2UI DataParts and persist across all stream chunks
 			if !hasFuncResp {
+				modelTurnEmitted = true
 				if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
 					for _, msg := range pending {
 						activeA2UIDataParts = append(activeA2UIDataParts, a2ui.BuildA2UIDataPart(msg))
@@ -232,14 +234,14 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 		}
 	}
 
-	// Guarantee that any pending A2UI visual cards are emitted before the stream closes if not yet attached to a model turn
-	if len(activeA2UIDataParts) == 0 {
+	// Guarantee that any pending A2UI visual cards are emitted on a role: "model" event before stream close
+	if !modelTurnEmitted || len(activeA2UIDataParts) > 0 {
 		if pending := a2ui.PopPendingA2UIMessages(runReq.SessionID); len(pending) > 0 {
 			for _, msg := range pending {
 				activeA2UIDataParts = append(activeA2UIDataParts, a2ui.BuildA2UIDataPart(msg))
 			}
 		}
-		if len(activeA2UIDataParts) > 0 {
+		if !modelTurnEmitted && len(activeA2UIDataParts) > 0 {
 			a2aResp := map[string]any{
 				"session_id": runReq.SessionID,
 				"events": []any{
