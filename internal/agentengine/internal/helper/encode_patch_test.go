@@ -3,6 +3,7 @@ package helper
 import (
 	"encoding/base64"
 	"reflect"
+	"strings"
 	"testing"
 
 	"google.golang.org/genai"
@@ -124,14 +125,19 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	// Must contain inline_data (for Discovery Engine protobuf compatibility)
-	if inlineData, hasInline := part["inline_data"].(map[string]any); !hasInline || inlineData["mime_type"] != "application/json+a2ui" {
-		t.Fatalf("expected inline_data with mime_type='application/json+a2ui', got: %#v", part["inline_data"])
+	// Must NOT contain inline_data (which Discovery Engine treats as an unsupported file attachment)
+	if _, hasInline := part["inline_data"]; hasInline {
+		t.Fatalf("expected inline_data to be deleted, got: %#v", part["inline_data"])
 	}
 
 	// Must be kind: "data" with metadata and parsed JSON data object (for Angular A2UI renderer)
 	if part["kind"] != "data" {
 		t.Fatalf("expected kind='data', got: %v", part["kind"])
+	}
+
+	// Must contain text with <a2a_datapart_json> envelope for Angular A2UI parser
+	if textStr, hasText := part["text"].(string); !hasText || !strings.Contains(textStr, "<a2a_datapart_json>") {
+		t.Fatalf("expected text with <a2a_datapart_json>, got: %#v", part["text"])
 	}
 
 	metadata, ok := part["metadata"].(map[string]any)
@@ -179,8 +185,8 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	if _, hasText := part["text"]; hasText {
-		t.Fatalf("part still contains text! Gemini Enterprise would render this raw in the chat bubble")
+	if textStr, hasText := part["text"].(string); !hasText || !strings.Contains(textStr, "<a2a_datapart_json>") {
+		t.Fatalf("expected text to contain <a2a_datapart_json>, got: %#v", part["text"])
 	}
 
 	if part["kind"] != "data" {
