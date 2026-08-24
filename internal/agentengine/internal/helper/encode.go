@@ -121,7 +121,8 @@ func convertSnake(path, indent string, o any) (any, error) {
 		}
 
 		// Convert A2UI inline_data or tagged text into native A2A DataPart (kind: data)
-		// so Gemini Enterprise renders interactive UI cards instead of treating it as an unsupported file attachment or text dump.
+		// while preserving inline_data (with base64 and mime_type: application/json+a2ui)
+		// so both Discovery Engine proto deserializer and Gemini Enterprise Angular A2UI renderer parse it.
 		if inlineData, ok := m["inline_data"].(map[string]any); ok {
 			mimeType, _ := inlineData["mime_type"].(string)
 			if rawData, ok := inlineData["data"].(string); ok {
@@ -138,10 +139,10 @@ func convertSnake(path, indent string, o any) (any, error) {
 
 					var dataObj any
 					if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
-						delete(m, "inline_data")
 						m["kind"] = "data"
 						m["metadata"] = map[string]any{
-							"mimeType": "application/json+a2ui",
+							"mimeType":  "application/json+a2ui",
+							"mime_type": "application/json+a2ui",
 						}
 						// If dataObj is already wrapped in {"kind":"data", "data": ...}, unwrap it
 						if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
@@ -152,6 +153,12 @@ func convertSnake(path, indent string, o any) (any, error) {
 							}
 						} else {
 							m["data"] = dataObj
+						}
+
+						cleanJSONBytes, _ := json.Marshal(m["data"])
+						m["inline_data"] = map[string]any{
+							"mime_type": "application/json+a2ui",
+							"data":      base64.StdEncoding.EncodeToString(cleanJSONBytes),
 						}
 					}
 				}
@@ -167,7 +174,8 @@ func convertSnake(path, indent string, o any) (any, error) {
 				delete(m, "text")
 				m["kind"] = "data"
 				m["metadata"] = map[string]any{
-					"mimeType": "application/json+a2ui",
+					"mimeType":  "application/json+a2ui",
+					"mime_type": "application/json+a2ui",
 				}
 				if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
 					if innerData, hasData := envelopeMap["data"]; hasData {
@@ -177,6 +185,12 @@ func convertSnake(path, indent string, o any) (any, error) {
 					}
 				} else {
 					m["data"] = dataObj
+				}
+
+				cleanJSONBytes, _ := json.Marshal(m["data"])
+				m["inline_data"] = map[string]any{
+					"mime_type": "application/json+a2ui",
+					"data":      base64.StdEncoding.EncodeToString(cleanJSONBytes),
 				}
 			}
 		}

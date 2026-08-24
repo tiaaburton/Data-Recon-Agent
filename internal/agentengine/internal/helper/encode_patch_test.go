@@ -124,12 +124,12 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	// Must NOT contain inline_data (which GE treats as a file upload/attachment)
-	if _, hasInline := part["inline_data"]; hasInline {
-		t.Fatalf("part still contains inline_data! Gemini Enterprise will treat this as an unsupported file attachment")
+	// Must contain inline_data (for Discovery Engine protobuf compatibility)
+	if inlineData, hasInline := part["inline_data"].(map[string]any); !hasInline || inlineData["mime_type"] != "application/json+a2ui" {
+		t.Fatalf("expected inline_data with mime_type='application/json+a2ui', got: %#v", part["inline_data"])
 	}
 
-	// Must be kind: "data" with metadata and parsed JSON data object
+	// Must be kind: "data" with metadata and parsed JSON data object (for Angular A2UI renderer)
 	if part["kind"] != "data" {
 		t.Fatalf("expected kind='data', got: %v", part["kind"])
 	}
