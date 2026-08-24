@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"google.golang.org/genai"
@@ -125,24 +126,18 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	// Must NOT contain inline_data (which Discovery Engine treats as an unsupported file attachment)
-	if _, hasInline := part["inline_data"]; hasInline {
-		t.Fatalf("expected inline_data to be deleted, got: %#v", part["inline_data"])
-	}
-
-	// Must be kind: "data" with metadata
-	if part["kind"] != "data" {
-		t.Fatalf("expected kind='data', got: %v", part["kind"])
-	}
-
-	metadata, ok := part["metadata"].(map[string]any)
-	if !ok || metadata["mimeType"] != "application/json+a2ui" {
-		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", part["metadata"])
-	}
-
-	b64Str, ok := part["data"].(string)
+	inlineData, ok := part["inline_data"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected data string (base64 bytes), got: %T", part["data"])
+		t.Fatalf("expected inline_data map, got: %#v", part["inline_data"])
+	}
+
+	if inlineData["mime_type"] != "text/plain" {
+		t.Fatalf("expected inline_data.mime_type='text/plain', got: %v", inlineData["mime_type"])
+	}
+
+	b64Str, ok := inlineData["data"].(string)
+	if !ok {
+		t.Fatalf("expected data string (base64 bytes), got: %T", inlineData["data"])
 	}
 
 	decodedBytes, err := base64.StdEncoding.DecodeString(b64Str)
@@ -150,9 +145,29 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("failed to decode base64 data bytes: %v", err)
 	}
 
-	var dataObj map[string]any
-	if err := json.Unmarshal(decodedBytes, &dataObj); err != nil {
-		t.Fatalf("failed to unmarshal JSON from decoded bytes: %v", err)
+	payloadStr := string(decodedBytes)
+	if !strings.HasPrefix(payloadStr, "<a2a_datapart_json>") || !strings.HasSuffix(payloadStr, "</a2a_datapart_json>") {
+		t.Fatalf("expected payload wrapped in <a2a_datapart_json>, got: %s", payloadStr)
+	}
+
+	jsonContent := strings.TrimSuffix(strings.TrimPrefix(payloadStr, "<a2a_datapart_json>"), "</a2a_datapart_json>")
+	var envelope map[string]any
+	if err := json.Unmarshal([]byte(jsonContent), &envelope); err != nil {
+		t.Fatalf("failed to unmarshal JSON from decoded payload: %v", err)
+	}
+
+	if envelope["kind"] != "data" {
+		t.Fatalf("expected kind='data', got: %v", envelope["kind"])
+	}
+
+	metadata, _ := envelope["metadata"].(map[string]any)
+	if metadata["mimeType"] != "application/json+a2ui" {
+		t.Fatalf("expected metadata.mimeType='application/json+a2ui', got: %#v", metadata)
+	}
+
+	dataObj, ok := envelope["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got: %T", envelope["data"])
 	}
 
 	createSurface, ok := dataObj["createSurface"].(map[string]any)
@@ -162,7 +177,7 @@ func TestA2UIDataPartConvertsToNativeA2APart(t *testing.T) {
 }
 
 // TestA2UITextPartConvertsToNativeA2APart verifies that if a text part contains
-// legacy <a2a_datapart_json> tags, ConvertSnake unwraps it into a native A2A DataPart (kind: "data").
+// legacy <a2a_datapart_json> tags, ConvertSnake unwraps it into an ADK Web inline_data part (mime_type: "text/plain").
 func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 	rawPayload := `<a2a_datapart_json>{"createSurface":{"surfaceId":"text-surface-1","catalogId":"https://a2ui.org/specification/v0_9/standard_catalog_definition.json"}}</a2a_datapart_json>`
 	content := &genai.Content{
@@ -190,13 +205,18 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("expected part map, got: %T", parts[0])
 	}
 
-	if part["kind"] != "data" {
-		t.Fatalf("expected kind='data', got: %v", part["kind"])
+	inlineData, ok := part["inline_data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected inline_data map, got: %#v", part["inline_data"])
 	}
 
-	b64Str, ok := part["data"].(string)
+	if inlineData["mime_type"] != "text/plain" {
+		t.Fatalf("expected inline_data.mime_type='text/plain', got: %v", inlineData["mime_type"])
+	}
+
+	b64Str, ok := inlineData["data"].(string)
 	if !ok {
-		t.Fatalf("expected data string (base64 bytes), got: %T", part["data"])
+		t.Fatalf("expected data string (base64 bytes), got: %T", inlineData["data"])
 	}
 
 	decodedBytes, err := base64.StdEncoding.DecodeString(b64Str)
@@ -204,9 +224,16 @@ func TestA2UITextPartConvertsToNativeA2APart(t *testing.T) {
 		t.Fatalf("failed to decode base64 data bytes: %v", err)
 	}
 
-	var dataObj map[string]any
-	if err := json.Unmarshal(decodedBytes, &dataObj); err != nil {
+	payloadStr := string(decodedBytes)
+	jsonContent := strings.TrimSuffix(strings.TrimPrefix(payloadStr, "<a2a_datapart_json>"), "</a2a_datapart_json>")
+	var envelope map[string]any
+	if err := json.Unmarshal([]byte(jsonContent), &envelope); err != nil {
 		t.Fatalf("failed to unmarshal JSON from decoded bytes: %v", err)
+	}
+
+	dataObj, ok := envelope["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got: %T", envelope["data"])
 	}
 
 	createSurface, ok := dataObj["createSurface"].(map[string]any)

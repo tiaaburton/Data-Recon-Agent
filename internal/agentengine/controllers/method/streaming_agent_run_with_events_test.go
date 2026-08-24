@@ -541,14 +541,21 @@ func TestGeminiEnterpriseApp_WireProtocol(t *testing.T) {
 					foundModelTurn = true
 					for _, pAny := range parts {
 						if pMap, ok := pAny.(map[string]any); ok {
-							if pMap["kind"] == "data" {
-								metadata, _ := pMap["metadata"].(map[string]any)
-								mimeType, _ := metadata["mimeType"].(string)
-								if mimeType != a2ui.A2UIMimeType {
-									t.Fatalf("Expected mimeType %q in data part metadata, got %q", a2ui.A2UIMimeType, mimeType)
+							var dataMap map[string]any
+							if inlineData, isInline := pMap["inline_data"].(map[string]any); isInline {
+								if b64Str, isStr := inlineData["data"].(string); isStr {
+									if bBytes, err := base64.StdEncoding.DecodeString(b64Str); err == nil {
+										payloadStr := string(bBytes)
+										jsonContent := strings.TrimSuffix(strings.TrimPrefix(payloadStr, "<a2a_datapart_json>"), "</a2a_datapart_json>")
+										var env map[string]any
+										if err := json.Unmarshal([]byte(jsonContent), &env); err == nil {
+											if dm, ok := env["data"].(map[string]any); ok {
+												dataMap = dm
+											}
+										}
+									}
 								}
-
-								var dataMap map[string]any
+							} else if pMap["kind"] == "data" {
 								if dm, isMap := pMap["data"].(map[string]any); isMap {
 									dataMap = dm
 								} else if b64Str, isStr := pMap["data"].(string); isStr {
@@ -556,22 +563,22 @@ func TestGeminiEnterpriseApp_WireProtocol(t *testing.T) {
 										_ = json.Unmarshal(bBytes, &dataMap)
 									}
 								}
+							}
 
-								if dataMap != nil {
-									if _, hasBegin := dataMap["beginRendering"]; hasBegin {
-										foundBeginRenderingDataPart = true
-									}
-									if su, hasSU := dataMap["surfaceUpdate"].(map[string]any); hasSU {
-										foundSurfaceUpdateDataPart = true
-										if comps, hasComps := su["components"].([]any); hasComps {
-											for _, cAny := range comps {
-												if cMap, isC := cAny.(map[string]any); isC {
-													if compDef, hasC := cMap["component"].(map[string]any); hasC {
-														if btn, hasBtn := compDef["Button"].(map[string]any); hasBtn {
-															if action, hasAct := btn["action"].(map[string]any); hasAct {
-																if action["name"] == "SubmitPrompt" {
-																	foundSubmitPromptButton = true
-																}
+							if dataMap != nil {
+								if _, hasBegin := dataMap["beginRendering"]; hasBegin {
+									foundBeginRenderingDataPart = true
+								}
+								if su, hasSU := dataMap["surfaceUpdate"].(map[string]any); hasSU {
+									foundSurfaceUpdateDataPart = true
+									if comps, hasComps := su["components"].([]any); hasComps {
+										for _, cAny := range comps {
+											if cMap, isC := cAny.(map[string]any); isC {
+												if compDef, hasC := cMap["component"].(map[string]any); hasC {
+													if btn, hasBtn := compDef["Button"].(map[string]any); hasBtn {
+														if action, hasAct := btn["action"].(map[string]any); hasAct {
+															if action["name"] == "SubmitPrompt" {
+																foundSubmitPromptButton = true
 															}
 														}
 													}

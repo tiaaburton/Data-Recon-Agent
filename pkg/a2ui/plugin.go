@@ -2,9 +2,9 @@ package a2ui
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -87,20 +87,8 @@ func UniquifySurfaceIDs(messages []any) []any {
 	return messages
 }
 
-// BuildA2UIDataPart creates a native A2A DataPart map with base64-encoded JSON bytes in data.
+// BuildA2UIDataPart creates a native A2A DataPart map.
 func BuildA2UIDataPart(a2uiMessage any) map[string]any {
-	var jsonBytes []byte
-	switch v := a2uiMessage.(type) {
-	case []byte:
-		jsonBytes = v
-	case string:
-		jsonBytes = []byte(v)
-	default:
-		jsonBytes, _ = json.Marshal(v)
-	}
-
-	b64Data := base64.StdEncoding.EncodeToString(jsonBytes)
-
 	return map[string]any{
 		"kind":      "data",
 		"mimeType":  A2UIMimeType,
@@ -109,17 +97,24 @@ func BuildA2UIDataPart(a2uiMessage any) map[string]any {
 			"mimeType":  A2UIMimeType,
 			"mime_type": A2UIMimeType,
 		},
-		"data": b64Data,
+		"data": a2uiMessage,
 	}
 }
 
-// WrapA2UIDataPartText wraps an A2UI message inside JSON text without XML tags.
+// WrapA2UIDataPartText wraps an A2UI message inside an <a2a_datapart_json> envelope string.
 func WrapA2UIDataPartText(a2uiMessage any) string {
-	jsonBytes, err := json.Marshal(a2uiMessage)
+	envelope := map[string]any{
+		"kind": "data",
+		"metadata": map[string]any{
+			"mimeType": A2UIMimeType,
+		},
+		"data": a2uiMessage,
+	}
+	jsonBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return ""
 	}
-	return string(jsonBytes)
+	return fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(jsonBytes))
 }
 
 // CleanRawJSONText cleans raw debug logs while preserving valid conversational text.

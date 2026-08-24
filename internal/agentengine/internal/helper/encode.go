@@ -120,8 +120,8 @@ func convertSnake(path, indent string, o any) (any, error) {
 			}
 		}
 
-		// Convert A2UI parts into native A2A DataPart (kind: data) with base64 JSON bytes in the data field.
-		// Strips inline_data and text so Discovery Engine emits a native binary A2A DataPart.
+		// Convert A2UI parts into Gemini Enterprise ADK Web inline_data (mime_type: text/plain, carrying base64-encoded <a2a_datapart_json>).
+		// mime_type MUST be "text/plain" so Discovery Engine & Gemini Enterprise do not treat it as an unsupported file attachment.
 		if inlineData, ok := m["inline_data"].(map[string]any); ok {
 			mimeType, _ := inlineData["mime_type"].(string)
 			if rawData, ok := inlineData["data"].(string); ok {
@@ -130,7 +130,7 @@ func convertSnake(path, indent string, o any) (any, error) {
 				if err != nil || len(decodedBytes) == 0 {
 					payloadStr = rawData
 				}
-				if mimeType == "application/json+a2ui" || strings.Contains(payloadStr, "<a2a_datapart_json>") || strings.Contains(payloadStr, "beginRendering") || strings.Contains(payloadStr, "surfaceUpdate") {
+				if mimeType == "application/json+a2ui" || mimeType == "text/plain" || strings.Contains(payloadStr, "<a2a_datapart_json>") || strings.Contains(payloadStr, "beginRendering") || strings.Contains(payloadStr, "surfaceUpdate") {
 					payloadStr = strings.TrimSpace(payloadStr)
 					payloadStr = strings.TrimPrefix(payloadStr, "<a2a_datapart_json>")
 					payloadStr = strings.TrimSuffix(payloadStr, "</a2a_datapart_json>")
@@ -138,13 +138,6 @@ func convertSnake(path, indent string, o any) (any, error) {
 
 					var dataObj any
 					if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
-						delete(m, "inline_data")
-						delete(m, "text")
-						m["kind"] = "data"
-						m["metadata"] = map[string]any{
-							"mimeType": "application/json+a2ui",
-						}
-						// If dataObj is already wrapped in {"kind":"data", "data": ...}, unwrap it
 						var innerPayload any = dataObj
 						if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
 							if innerData, hasData := envelopeMap["data"]; hasData {
@@ -152,8 +145,25 @@ func convertSnake(path, indent string, o any) (any, error) {
 							}
 						}
 
-						cleanJSONBytes, _ := json.Marshal(innerPayload)
-						m["data"] = base64.StdEncoding.EncodeToString(cleanJSONBytes)
+						envelope := map[string]any{
+							"kind": "data",
+							"metadata": map[string]any{
+								"mimeType": "application/json+a2ui",
+							},
+							"data": innerPayload,
+						}
+						envBytes, _ := json.Marshal(envelope)
+						taggedStr := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(envBytes))
+						b64Payload := base64.StdEncoding.EncodeToString([]byte(taggedStr))
+
+						delete(m, "text")
+						delete(m, "kind")
+						delete(m, "metadata")
+						delete(m, "data")
+						m["inline_data"] = map[string]any{
+							"mime_type": "text/plain",
+							"data":      b64Payload,
+						}
 					}
 				}
 			}
@@ -165,12 +175,6 @@ func convertSnake(path, indent string, o any) (any, error) {
 
 			var dataObj any
 			if err := json.Unmarshal([]byte(payloadStr), &dataObj); err == nil {
-				delete(m, "inline_data")
-				delete(m, "text")
-				m["kind"] = "data"
-				m["metadata"] = map[string]any{
-					"mimeType": "application/json+a2ui",
-				}
 				var innerPayload any = dataObj
 				if envelopeMap, isEnv := dataObj.(map[string]any); isEnv {
 					if innerData, hasData := envelopeMap["data"]; hasData {
@@ -178,8 +182,25 @@ func convertSnake(path, indent string, o any) (any, error) {
 					}
 				}
 
-				cleanJSONBytes, _ := json.Marshal(innerPayload)
-				m["data"] = base64.StdEncoding.EncodeToString(cleanJSONBytes)
+				envelope := map[string]any{
+					"kind": "data",
+					"metadata": map[string]any{
+						"mimeType": "application/json+a2ui",
+					},
+					"data": innerPayload,
+				}
+				envBytes, _ := json.Marshal(envelope)
+				taggedStr := fmt.Sprintf("<a2a_datapart_json>%s</a2a_datapart_json>", string(envBytes))
+				b64Payload := base64.StdEncoding.EncodeToString([]byte(taggedStr))
+
+				delete(m, "text")
+				delete(m, "kind")
+				delete(m, "metadata")
+				delete(m, "data")
+				m["inline_data"] = map[string]any{
+					"mime_type": "text/plain",
+					"data":      b64Payload,
+				}
 			}
 		}
 
