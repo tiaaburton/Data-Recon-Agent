@@ -183,7 +183,19 @@ func (s *streamingAgentRunWithEventsHandler) streamJSONL(ctx context.Context, rw
 
 							if targetContent != nil {
 								existingParts, _ := targetContent["parts"].([]any)
-								targetContent["parts"] = append(existingParts, activeA2UIDataParts...)
+								hasDataPart := false
+								for _, p := range existingParts {
+									if pMap, isPMap := p.(map[string]any); isPMap {
+										if pMap["kind"] == "data" {
+											hasDataPart = true
+											break
+										}
+									}
+								}
+								if !hasDataPart && len(activeA2UIDataParts) > 0 {
+									existingParts = append(existingParts, activeA2UIDataParts...)
+								}
+								targetContent["parts"] = existingParts
 								targetContent["role"] = "model"
 								ev0["content"] = targetContent
 								if llmResp, ok := ev0["llm_response"].(map[string]any); ok && llmResp != nil {

@@ -186,93 +186,123 @@ func NewA2UIPartsPlugin() (*plugin.Plugin, error) {
 	return plugin.New(plugin.Config{
 		Name: "a2ui_parts_plugin",
 		OnEventCallback: func(ctx agent.InvocationContext, event *session.Event) (*session.Event, error) {
-			if event == nil || event.Content == nil || len(event.Content.Parts) == 0 {
+			if event == nil {
 				return nil, nil
 			}
 
 			sessKey := getSessionKey(ctx)
-			newParts := make([]*genai.Part, 0, len(event.Content.Parts))
 			modified := false
 
-			for _, part := range event.Content.Parts {
-				// Clean text parts to avoid showing raw machine JSON in chat bubble while preserving <a2a_datapart_json>
-				if part.Text != "" {
-					cleaned := CleanRawJSONText(part.Text)
-					if cleaned != part.Text {
-						modified = true
-						if cleaned != "" {
-							part.Text = cleaned
-							newParts = append(newParts, part)
-						}
-						continue
-					}
-				}
-
-				// Check function responses for A2UI payload envelopes
-				if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
-					respMap := part.FunctionResponse.Response
-					var rawPayload any
-					for k, v := range respMap {
-						lowerKey := strings.ToLower(k)
-						if lowerKey == "validated_a2ui_json" || lowerKey == "a2ui_payload" || lowerKey == "a2ui_json" {
-							rawPayload = v
-							break
-						}
-					}
-
-					if rawPayload != nil {
-						var messages []any
-						if s, isStr := rawPayload.(string); isStr {
-							var parsed any
-							if err := json.Unmarshal([]byte(s), &parsed); err == nil {
-								if list, isList := parsed.([]any); isList {
-									messages = list
-								} else if m, isMap := parsed.(map[string]any); isMap {
-									messages = []any{m}
-								}
-							}
-						} else if list, isList := rawPayload.([]any); isList {
-							messages = list
-						} else if listMap, isListMap := rawPayload.([]map[string]any); isListMap {
-							for _, m := range listMap {
-								messages = append(messages, m)
-							}
-						} else if m, isMap := rawPayload.(map[string]any); isMap {
-							messages = []any{m}
-						}
-
-						if len(messages) > 0 {
-							messages = UniquifySurfaceIDs(messages)
-							// Store messages for delivery on the model turn in SSE streaming
-							StorePendingA2UIMessages(sessKey, messages)
-
-							// Convert to ADK GenAI Part with <a2a_datapart_json> wrapper
-							for _, msg := range messages {
-								dataPartText := WrapA2UIDataPartText(msg)
-								if dataPartText != "" {
-									newParts = append(newParts, &genai.Part{Text: dataPartText})
-								}
-							}
-						}
-
-						sanitizedResp := make(map[string]any)
+			// 1. Intercept FunctionResponse to capture A2UI envelopes and sanitize history
+			if event.Content != nil && len(event.Content.Parts) > 0 {
+				newParts := make([]*genai.Part, 0, len(event.Content.Parts))
+				for _, part := range event.Content.Parts {
+					if part.FunctionResponse != nil && part.FunctionResponse.Response != nil {
+						respMap := part.FunctionResponse.Response
+						var rawPayload any
 						for k, v := range respMap {
-							if k != "a2ui_json" && k != "a2ui_payload" && k != "validated_a2ui_json" {
-								sanitizedResp[k] = v
+							lowerKey := strings.ToLower(k)
+							if lowerKey == "validated_a2ui_json" || lowerKey == "a2ui_payload" || lowerKey == "a2ui_json" {
+								rawPayload = v
+								break
 							}
 						}
-						sanitizedResp["status"] = "success"
-						sanitizedResp["a2ui_status"] = "A2UI_SURFACE_SYNTHESIZED"
-						part.FunctionResponse.Response = sanitizedResp
-						modified = true
+
+						if rawPayload != nil {
+							var messages []any
+							if s, isStr := rawPayload.(string); isStr {
+								var parsed any
+								if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+									if list, isList := parsed.([]any); isList {
+										messages = list
+									} else if m, isMap := parsed.(map[string]any); isMap {
+										messages = []any{m}
+									}
+								}
+							} else if list, isList := rawPayload.([]any); isList {
+								messages = list
+							} else if listMap, isListMap := rawPayload.([]map[string]any); isListMap {
+								for _, m := range listMap {
+									messages = append(messages, m)
+								}
+							} else if m, isMap := rawPayload.(map[string]any); isMap {
+								messages = []any{m}
+							}
+
+							if len(messages) > 0 {
+								messages = UniquifySurfaceIDs(messages)
+								// Store messages for delivery on the upcoming model turn
+								StorePendingA2UIMessages(sessKey, messages)
+							}
+
+							sanitizedResp := make(map[string]any)
+							for k, v := range respMap {
+								if k != "a2ui_json" && k != "a2ui_payload" && k != "validated_a2ui_json" {
+									sanitizedResp[k] = v
+								}
+							}
+							sanitizedResp["status"] = "success"
+							sanitizedResp["a2ui_status"] = "A2UI_SURFACE_SYNTHESIZED"
+							part.FunctionResponse.Response = sanitizedResp
+							modified = true
+						}
+					}
+					newParts = append(newParts, part)
+				}
+				if modified {
+					event.Content.Parts = newParts
+				}
+			}
+
+			// 2. Attach pending A2UI DataParts to the Model turn event so Gemini Enterprise renders them
+			isModelTurn := (event.LLMResponse.Content != nil && len(event.LLMResponse.Content.Parts) > 0) ||
+				(event.Content != nil && event.Content.Role == "model" && len(event.Content.Parts) > 0)
+
+			if isModelTurn {
+				var targetParts []*genai.Part
+				if event.LLMResponse.Content != nil {
+					targetParts = event.LLMResponse.Content.Parts
+				} else if event.Content != nil {
+					targetParts = event.Content.Parts
+				}
+
+				// Clean text parts of raw JSON dumps
+				cleanedParts := make([]*genai.Part, 0, len(targetParts))
+				for _, part := range targetParts {
+					if part.Text != "" {
+						cleaned := CleanRawJSONText(part.Text)
+						if cleaned != part.Text {
+							modified = true
+							if cleaned != "" {
+								part.Text = cleaned
+								cleanedParts = append(cleanedParts, part)
+							}
+							continue
+						}
+					}
+					cleanedParts = append(cleanedParts, part)
+				}
+
+				// Attach A2A DataPart envelopes to the Model event
+				if pending := PopPendingA2UIMessages(sessKey); len(pending) > 0 {
+					for _, msg := range pending {
+						dataPartText := WrapA2UIDataPartText(msg)
+						if dataPartText != "" {
+							cleanedParts = append(cleanedParts, &genai.Part{Text: dataPartText})
+							modified = true
+						}
 					}
 				}
 
-				newParts = append(newParts, part)
+				if event.LLMResponse.Content != nil {
+					event.LLMResponse.Content.Parts = cleanedParts
+				}
+				if event.Content != nil {
+					event.Content.Parts = cleanedParts
+				}
 			}
 
 			if modified {
-				event.Content.Parts = newParts
 				return event, nil
 			}
 
